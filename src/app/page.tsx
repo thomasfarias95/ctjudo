@@ -13,7 +13,7 @@ const HomePage: React.FC = () => {
   return (
     <>
       <Head>
-        <title>Equipe CT Ferroviario de Judô - Disciplina, Respeito e Superação</title>
+        <title>Equipe  Ferroviario de Judô - Disciplina, Respeito e Superação</title>
         <meta name="description" 
         content="Junte-se à Equipe Bushido Judô! Aulas para todas as idades, desenvolvimento físico e mental. Venha treinar conosco!" />
         <meta name="keywords"

@@ -17,7 +17,7 @@ const Navbar: React.FC = () => {
             >
         </Image>
         <Link href="/" className="text-black text-2xl font-bold">
-          Equipe CT Ferroviário de Judô
+          CT Ferroviário de Judô
         </Link>
 
         {/* Botão para Mobile */}
