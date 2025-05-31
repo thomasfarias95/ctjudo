@@ -17,10 +17,10 @@ const About: React.FC = () => {
           </div>
           <div className="md:w-1/2 text-center">
             <p className="text-lg leading-relaxed mb-4">
-              Fundada na decada de 70, o Ferroviário Clube de Judô tem como missão promover o judô como ferramenta de desenvolvimento humano integral. Nossos mestres e instrutores são dedicados a transmitir não apenas as técnicas de luta, mas também os princípios milenares de **disciplina, respeito, ética e autoconfiança** que são a base do judô.
+              Fundada na decada de 70, o Ferroviário Clube de Judô tem como missão promover o judô como ferramenta de desenvolvimento humano integral. Nossos mestres e instrutores são dedicados a transmitir não apenas as técnicas de luta, mas também os princípios milenares de <strong>disciplina, respeito, ética e autoconfiança que são a base do judô.</strong>
             </p>
             <p className="text-lg leading-relaxed mb-4">
-              Acreditamos que o judô é para todos, independentemente da idade, gênero ou nível de experiência. Nossos treinos são cuidadosamente adaptados para garantir o aprendizado e a evolução de cada aluno, em um ambiente **seguro, acolhedor e desafiador**.
+              Acreditamos que o judô é para todos, independentemente da idade, gênero ou nível de experiência. Nossos treinos são cuidadosamente adaptados para garantir o aprendizado e a evolução de cada aluno, em <strong>um ambiente seguro, acolhedor e desafiador.</strong>
             </p>
             <p className="text-lg leading-relaxed mb-4">
               Venha fazer parte da nossa família no tatame e descubra o poder transformador do judô!

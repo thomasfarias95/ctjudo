@@ -12,6 +12,8 @@ const Contact: React.FC = () => {
   // Estado para exibir o status do envio (sucesso/erro)
   const [status, setStatus] = useState('');
 
+  
+
   // Lida com a mudança nos campos do formulário
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -89,7 +91,7 @@ const Contact: React.FC = () => {
           {/* Formulário de Contato */}
           <div className="flex-1 bg-white p-8 rounded-lg shadow-xl text-judo-dark-gray">
             <h3 className="text-2xl font-semibold mb-6 text-judo-orange">Envie-nos uma Mensagem</h3>
-            <form onSubmit={handleSubmit} action="/submit-form" method="POST">
+            <form onSubmit={handleSubmit} action="https://formspree.io/f/xldnrayg" method="POST">
             <input type="hidden" name="access_key" value="6423db76-2cbd-4a67-bc60-bc98cfce112d" />
               <div className="mb-4">
                 <label htmlFor="name" className="block text-lg font-medium mb-2">Nome Completo:</label>
