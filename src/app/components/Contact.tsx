@@ -9,47 +9,24 @@ const Contact: React.FC = () => {
     phone: '',
     message: '',
   });
-  // Estado para exibir o status do envio (sucesso/erro)
+  
   const [status, setStatus] = useState('');
 
   
-
-  // Lida com a mudança nos campos do formulário
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // Lida com o envio do formulário
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault(); // Previne o comportamento padrão de recarregar a página
-    setStatus('Enviando...'); // Atualiza o status para "Enviando..."
-
-    try {
-      // Faz uma requisição POST para a API Route
-      const response = await fetch('/api/contact', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json', // Indica que o corpo da requisição é JSON
-        },
-        body: JSON.stringify(formData), // Converte os dados do formulário para JSON
-      });
-
-      const data = await response.json(); // Analisa a resposta JSON
-
-      if (response.ok) {
-        // Se a resposta for bem-sucedida (status 2xx)
-        setStatus('Mensagem enviada com sucesso!');
-        setFormData({ name: '', email: '',phone:'', message: '' }); // Limpa o formulário
-      } else {
-        // Se houver um erro na resposta da API
-        setStatus(`Erro: ${data.message || 'Ocorreu um erro desconhecido.'}`);
-      }
-    } catch (error) {
-      // Lida com erros de rede ou outros erros durante a requisição
-      console.error('Erro ao enviar o formulário:', error);
-      setStatus('Erro ao conectar com o servidor. Tente novamente mais tarde.');
-    }
-  };
+ const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => { 
+   if (!formData.name || !formData.email || !formData.message) {
+    setStatus('Por favor, preencha todos os campos obrigatórios.');
+    e.preventDefault();
+return;
+ }
+    
+    setStatus('Enviando mensagem...');
+    
+};
 
   return (
     <section id="contact" className="py-16 px-4 bg-judo-blue text-black">
@@ -91,8 +68,9 @@ const Contact: React.FC = () => {
           {/* Formulário de Contato */}
           <div className="flex-1 bg-white p-8 rounded-lg shadow-xl text-judo-dark-gray">
             <h3 className="text-2xl font-semibold mb-6 text-judo-orange">Envie-nos uma Mensagem</h3>
-            <form onSubmit={handleSubmit} action="https://formspree.io/f/xldnrayg" method="POST">
-            <input type="hidden" name="access_key" value="6423db76-2cbd-4a67-bc60-bc98cfce112d" />
+            <form onSubmit={handleSubmit} action="https://formsubmit.co/fc40c877ef3650b019923bcf5c106389" method="POST">
+            <input type="hidden" name="_captcha" value="false"/>
+            <input type="hidden" name="access_key" value="c40c877ef3650b019923bcf5c106389" />
               <div className="mb-4">
                 <label htmlFor="name" className="block text-lg font-medium mb-2">Nome Completo:</label>
                 <input
