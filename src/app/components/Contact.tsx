@@ -1,13 +1,9 @@
 "use client";
-import React, { useState, useEffect } from "react";
-import emailjs from "emailjs-com";
+import React, { useState } from "react";
+import { sendEmail } from "../components/service/emails";
+import { FormData } from "../components/types/FormData";
 
-interface FormData {
-  user_name: string;
-  user_email: string;
-  user_phone: string;
-  message: string;
-}
+
 
 const Contact: React.FC = () => {
   const [formData, setFormData] = useState<FormData>({
@@ -21,10 +17,6 @@ const Contact: React.FC = () => {
   const [isSent, setIsSent] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  useEffect(() => {
-    emailjs.init("vAZbydEMbrzEfPQy2"); // sua chave pública
-  }, []);
-
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
@@ -32,29 +24,37 @@ const Contact: React.FC = () => {
     setFormData((prevData) => ({ ...prevData, [name]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setIsLoading(true);
+const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  e.preventDefault();
+  setIsLoading(true);
 
-    emailjs
-      .send("service_v1r2ana", "template_zsk9hiv")
-      .then(() => {
-        setIsSent(true);
-        setFormData({
-          user_name: "",
-          user_email: "",
-          user_phone: "",
-          message: "",
-        });
-        setTimeout(() => setIsSent(false), 5000);
-      })
-      .catch((error) => {
-        console.error("Erro ao enviar:", error);
-        setErrorMessage("Ocorreu um erro ao enviar sua mensagem.");
-        setTimeout(() => setErrorMessage(""), 5000);
-      })
-      .finally(() => setIsLoading(false));
-  };
+  // Validação dos campos obrigatórios
+  if (!formData.user_name || !formData.user_email || !formData.message) {
+    setErrorMessage("Por favor, preencha todos os campos obrigatórios.");
+    setIsLoading(false);
+    setTimeout(() => setErrorMessage(""), 5000);
+    return;
+  }
+
+  try {
+    await sendEmail(formData);
+    setIsSent(true);
+    setFormData({
+      user_name: "",
+      user_email: "",
+      user_phone: "",
+      message: "",
+    });
+    setTimeout(() => setIsSent(false), 5000);
+  } catch (error) {
+    console.error("Erro ao enviar:", error);
+    setErrorMessage("Ocorreu um erro ao enviar sua mensagem.");
+    setTimeout(() => setErrorMessage(""), 5000);
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   return (
     <section id="contact" className="py-16 px-4 bg-judo-blue text-black">
