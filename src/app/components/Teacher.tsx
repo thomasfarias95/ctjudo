@@ -11,7 +11,7 @@ const classTypes: ClassType[] = [
   
   {
    title: 'Sensei Tito',
-    description: 'Com mais de 20 anos de experiencia de aula em Judô',
+    description: 'Com mais de 30 anos de experiencia de aula em Judô',
     beltSystem: '5º dan',
     image: "/profaldisio.jpg",
   },

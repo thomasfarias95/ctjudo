@@ -28,13 +28,14 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
   e.preventDefault();
   setIsLoading(true);
 
-  // Validação dos campos obrigatórios
-  if (!formData.user_name || !formData.user_email || !formData.message) {
-    setErrorMessage("Por favor, preencha todos os campos obrigatórios.");
-    setIsLoading(false);
-    setTimeout(() => setErrorMessage(""), 5000);
-    return;
-  }
+  
+ if (Object.values(formData).some(value => value.trim() === "")) {
+  setErrorMessage("Todos os campos devem ser preenchidos.");
+  setIsLoading(false); // também é bom parar o loading aqui
+  setTimeout(() => setErrorMessage(""), 5000);
+  return;
+}
+
 
   try {
     await sendEmail(formData);
