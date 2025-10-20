@@ -8,15 +8,16 @@ const Navbar: React.FC = () => {
 
   return (
     <nav className="bg-white text-black p-4 fixed w-full z-50 shadow-md overflow-x-hidden">
-      <div className="container mx-auto flex justify-between items-center">
+      <div className="container mx-auto flex justify-between items-center ">
         <Link href="/">
-          <Image
+          <Image 
             src="/logo.png"
             alt="Logo"
-            width={150}
-            height={80}
+            width={250}
+            height={100}
             priority
           />
+         
         </Link>
 
         <Link href="/" className="text-black text-2xl font-bold">

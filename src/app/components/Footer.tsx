@@ -1,9 +1,30 @@
 import Link from 'next/link';
+import Image from "next/image";
 
 const Footer: React.FC = () => {
   return (
     <footer className="bg-judo-blue py-8 px-4 text-white text-center">
-      <div className="container mx-auto">
+ <div className="container mx-auto">
+  <h2 className="text-4xl font-bold mb-10 text-white">
+          Apoio
+        </h2>
+       <div className="flex-1 bg-white flex items-center mb-2  p-4   animate-fade-in flex flex-col md:flex-row gap-12 shadow-xl">
+          <Image
+            src="/cbj.jpg"
+            alt="Logo"
+            width={120}
+            height={80}
+            priority
+          />
+          <Image
+            src="/fpeju.jpg"
+            alt="Logo"
+            width={50}
+            height={30}
+            priority
+          />
+          </div>
+     
         <p className="text-sm md:text-base mb-4">
           © {new Date().getFullYear()} Equipe CT Ferroviário Judô. Todos os direitos reservados.
         </p>
@@ -25,6 +46,8 @@ const Footer: React.FC = () => {
             Termos de Uso
           </Link>
         </div>
+       
+         
       </div>
     </footer>
   );
