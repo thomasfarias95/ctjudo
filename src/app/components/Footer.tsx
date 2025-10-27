@@ -23,6 +23,14 @@ const Footer: React.FC = () => {
             height={30}
             priority
           />
+
+           <Image
+            src="/rfcontabil.png"
+            alt="Logo"
+            width={150}
+            height={80}
+            priority
+          />
           </div>
      
         <p className="text-sm md:text-base mb-4">
