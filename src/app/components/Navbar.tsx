@@ -28,7 +28,7 @@ const Navbar: React.FC = () => {
         <div className="md:hidden">
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="text-black focus:outline-none"
+            className="text-black focus:outline-none  w-12 h-12"
             aria-label="Abrir menu"
           >
             <i className={`fas ${isOpen ? "fa-times" : "fa-bars"} text-2xl`}></i>
@@ -57,36 +57,46 @@ const Navbar: React.FC = () => {
 
       {/* Menu Mobile */}
       {isOpen && (
-        <div className="md:hidden bg-judo-blue absolute top-full left-0 w-full">
-          <Link
-            href="#about"
-            onClick={() => setIsOpen(false)}
-            className="block text-white px-4 py-2 hover:bg-judo-orange transition duration-300"
-          >
-            Sobre Nós
-          </Link>
-          <Link
-            href="#teacher"
-            onClick={() => setIsOpen(false)}
-            className="block text-white px-4 py-2 hover:bg-judo-orange transition duration-300"
-          >
-            Sensei
-          </Link>
-          <Link
-            href="#classes"
-            onClick={() => setIsOpen(false)}
-            className="block text-white px-4 py-2 hover:bg-judo-orange transition duration-300"
-          >
-            Aulas
-          </Link>
-          <Link
-            href="#contact"
-            onClick={() => setIsOpen(false)}
-            className="block bg-judo-orange text-white px-4 py-2 mt-2 rounded-md hover:bg-orange-600 transition duration-300"
-          >
-            Contato
-          </Link>
-        </div>
+        <div 
+    className={`
+      md:hidden 
+      bg-judo-blue 
+      absolute top-full left-0 w-full 
+      overflow-hidden 
+      transition-all duration-500 ease-in-out 
+      ${isOpen ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0'}
+    `}
+  >
+    <Link
+      href="#about"
+      onClick={() => setIsOpen(false)}
+      className="block text-white px-4 py-2 hover:bg-judo-orange transition duration-300"
+    >
+      Sobre Nós
+    </Link>
+    <Link
+      href="#teacher"
+      onClick={() => setIsOpen(false)}
+      className="block text-white px-4 py-2 hover:bg-judo-orange transition duration-300"
+    >
+      Sensei
+    </Link>
+    <Link
+      href="#classes"
+      onClick={() => setIsOpen(false)}
+      className="block text-white px-4 py-2 hover:bg-judo-orange transition duration-300"
+    >
+      Aulas
+    </Link>
+    <Link
+      href="#contact"
+      onClick={() => setIsOpen(false)}
+      className="block bg-judo-orange text-white px-4 py-2 mt-2 rounded-md hover:bg-orange-600 transition duration-300"
+    >
+      Contato
+    </Link>
+  </div>
+
       )}
     </nav>
   );

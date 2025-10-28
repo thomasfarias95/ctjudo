@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState } from 'react'; 
 import emailjs from "@emailjs/browser";
 import { EmailFormData } from "../components/types/FormData"; 
 
@@ -9,72 +9,81 @@ const TEMPLATE_ID = process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID!;
 const PUBLIC_KEY = process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY!;
 
 
+if (typeof window !== 'undefined' && PUBLIC_KEY) {
+    emailjs.init({ publicKey: PUBLIC_KEY });
+}
+
 const Contact: React.FC = () => {
-    
-    const [formData, setFormData] = useState<EmailFormData>({
-        user_name: "",
-        user_email: "",
-        user_phone: "",
-        message: "",
-    });
+const [formData, setFormData] = useState<EmailFormData>({
+ user_name: "",
+user_email: "",
+user_phone: "",
+message: "",
+ });
 
-    const [isLoading, setIsLoading] = useState(false);
-    const [isSent, setIsSent] = useState(false);
-    const [errorMessage, setErrorMessage] = useState("");
+const [isLoading, setIsLoading] = useState(false);
+const [isSent, setIsSent] = useState(false);
+const [errorMessage, setErrorMessage] = useState("");
 
-    
-    const handleChange = (
-        e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-    ) => {
-        const { name, value } = e.target;
-        setFormData((prevData: EmailFormData) => ({ 
-            ...prevData, 
-            [name]: value,
-        }));
-    };
 
-    
-    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setErrorMessage(""); 
+const handleChange = (
+ e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+ const { name, value } = e.target;
+ setFormData((prevData: EmailFormData) => ({ 
+ ...prevData, 
+ [name]: value,
+ }));
 
-    
-    if (Object.values(formData).some((value) => (value as string).trim() === "")) {
-        setErrorMessage("Todos os campos devem ser preenchidos.");
-        setIsLoading(false); 
-        setTimeout(() => setErrorMessage(""), 5000);
-        return;
+ if (errorMessage) setErrorMessage(""); 
+};
+
+
+ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        
+        // 1. Inicia o loading e limpa mensagens anteriores
+        setIsLoading(true);
+        setErrorMessage(""); 
+        setIsSent(false); // Reseta o status de envio
+
+        // 2. Validação: Checa se campos obrigatórios estão vazios
+        const requiredFields = [formData.user_name, formData.user_email, formData.message];
+        if (requiredFields.some(value => value.trim() === "")) {
+            setErrorMessage("Por favor, preencha todos os campos obrigatórios.");
+            setIsLoading(false); 
+            setTimeout(() => setErrorMessage(""), 5000);
+            return;
+        }
+
+        try {
+            // A inicialização agora ocorre fora da função Contact, antes dela ser renderizada.
+
+            await emailjs.send(
+                SERVICE_ID,
+                TEMPLATE_ID,
+                // Asserção de tipo para o objeto de dados
+                formData as unknown as Record<string, unknown> 
+            );
+
+            // Sucesso
+            setIsSent(true);
+            setFormData({ // Limpa o formulário
+                user_name: "",
+                user_email: "",
+                user_phone: "", // Mantido vazio
+                message: "",
+            });
+            setTimeout(() => setIsSent(false), 5000);
+        } catch (error) {
+            
+            console.error("Erro ao enviar:", JSON.stringify(error, null, 2) || error); 
+            
+            setErrorMessage("Ocorreu um erro ao enviar sua mensagem. Verifique a configuração do EmailJS e o console para detalhes."); 
+            setTimeout(() => setErrorMessage(""), 5000);
+        } finally {
+            setIsLoading(false);
+        }
     }
-
-    try {
-        emailjs.init({ publicKey: PUBLIC_KEY });
-
-        await emailjs.send(
-            SERVICE_ID,
-            TEMPLATE_ID,
-            formData as unknown as Record<string, unknown> 
-        );
-
-        setIsSent(true);
-        setFormData({ // Limpa o formulário
-            user_name: "",
-            user_email: "",
-            user_phone: "",
-            message: "",
-        });
-        setTimeout(() => setIsSent(false), 5000);
-    } catch (error) {
-    
-    console.error("Erro ao enviar:", JSON.stringify(error, null, 2) || error); 
-    
-    
-    setErrorMessage("Ocorreu um erro ao enviar sua mensagem. Verifique o console para mais detalhes."); 
-    setTimeout(() => setErrorMessage(""), 5000);
-} finally {
-    setIsLoading(false);
-}
-}
 
 
   return (
