@@ -7,6 +7,7 @@ import Contact from './components/Contact';
 import Footer from './components/Footer';
 import Teacher from './components/Teacher';
 
+
 const HomePage: React.FC = () => {
   return (
     <>
