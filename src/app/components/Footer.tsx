@@ -22,9 +22,6 @@ const Footer: React.FC = () => {
           />
           </div>
      
-        <p className="text-sm md:text-base mb-4">
-          © {new Date().getFullYear()} Equipe CT Ferroviário Judô. Todos os direitos reservados.
-        </p>
         <div className="flex justify-center space-x-6">
           <a href="https://www.instagram.com/ctferroviario2022" target="_blank" rel="noopener noreferrer" className="text-white hover:text-judo-orange transition duration-300">
             <i className="fab fa-instagram text-3xl"></i>
@@ -43,7 +40,9 @@ const Footer: React.FC = () => {
             Termos de Uso
           </Link>
         </div>
-       
+       <p className="text-sm md:text-base mb-4">
+          © {new Date().getFullYear()} Equipe CT Ferroviário Judô. Todos os direitos reservados.
+        </p>
          
       </div>
     </footer>
