@@ -24,7 +24,7 @@ const WhatsAppButton: React.FC<WhatsAppButtonProps> = ({ numero, mensagem }) => 
       aria-label="Fale conosco pelo WhatsApp"
       className="
         fixed 
-        bottom-4 md:bottom-8 
+        bottom-8 md:bottom-8 
         right-4 md:right-8 
         bg-green-500 
         hover:bg-green-600 

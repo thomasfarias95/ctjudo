@@ -1,4 +1,4 @@
-import Head from 'next/head';
+import type { Metadata } from 'next';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import About from './components/About';
@@ -8,15 +8,16 @@ import Footer from './components/Footer';
 import Teacher from './components/Teacher';
 
 
+export const metadata: Metadata = {
+  title: 'Equipe CT Ferroviario de Judô - Disciplina, Respeito e Superação',
+  description: 'Junte-se à Equipe Bushido Judô! Aulas para todas as idades, desenvolvimento físico e mental. Venha treinar conosco!',
+  keywords: ['judô', 'aulas de judô', 'equipe de judô', 'artes marciais', 'Recife', 'Pernambuco', 'crianças', 'adultos', 'defesa pessoal'],
+};
+
+
 const HomePage: React.FC = () => {
   return (
     <>
-      <Head>
-        <title>Equipe CT Ferroviario de Judô - Disciplina, Respeito e Superação</title>
-        <meta name="description" content="Junte-se à Equipe Bushido Judô! Aulas para todas as idades, desenvolvimento físico e mental. Venha treinar conosco!" />
-        <meta name="keywords" content="judô, aulas de judô, equipe de judô, artes marciais, Recife, Pernambuco, crianças, adultos, defesa pessoal" />
-      </Head>
-      <body className="overflow-x-hidden" />
       <Navbar />
       <main>
         <Hero />
@@ -25,7 +26,6 @@ const HomePage: React.FC = () => {
         <Classes />
         <Contact />
       </main>
-      
       <Footer />
     </>
   );
