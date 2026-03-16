@@ -6,6 +6,7 @@ import Classes from './components/Classes';
 import Contact from './components/Contact';
 import Footer from './components/Footer';
 import Teacher from './components/Teacher';
+import WhatsAppButton from './components/WhatsAppButton';
 
 
 export const metadata: Metadata = {
@@ -26,6 +27,7 @@ const HomePage: React.FC = () => {
         <Classes />
         <Contact />
       </main>
+      <WhatsAppButton numero = "+5581998264250" />
       <Footer />
     </>
   );

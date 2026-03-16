@@ -1,49 +1,59 @@
 import Link from 'next/link';
 import Image from "next/image";
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faInstagram, faWhatsapp } from '@fortawesome/free-brands-svg-icons';
 
 const Footer: React.FC = () => {
   return (
-    <footer className="bg-judo-blue py-8 px-4 text-white text-center">
- <div className="container mx-auto ">
-       <div className="flex-1 mx-auto max-w-2xl justify-center space-x-6 items-center mb-2  p-4   animate-fade-in flex flex-col md:flex-row gap-12 shadow-xl">
-          <Image
-            src="/cbj.jpg"
-            alt="Logo"
-            width={180}
-            height={100}
-            priority
-          />
-          <Image
-            src="/fpeju.jpg"
-            alt="Logo"
-            width={130}
-            height={70}
-            priority
-          />
-          </div>
-     
-        <div className="flex justify-center space-x-6">
-          <a href="https://www.instagram.com/ctferroviario2022" target="_blank" rel="noopener noreferrer" className="text-white hover:text-judo-orange transition duration-300">
-            <i className="fab fa-instagram text-3xl"></i>
-          </a>
+    <footer className="bg-judo-blue py-12 px-4 text-white text-center">
+      <div className="container mx-auto max-w-4xl">
         
-          <a href="https://wa.me/5581998264250" target="_blank" rel="noopener noreferrer" className="text-white hover:text-judo-orange transition duration-300">
-            <i className="fab fa-whatsapp text-3xl"></i>
-          </a>
-          {/* Adicione outros links de redes sociais aqui */}
+        {/* Logos das Federações */}
+        <div className="flex flex-col md:flex-row items-center justify-center gap-8 mb-10 p-6 bg-white/5 rounded-2xl">
+          <Image src="/cbj.jpg" alt="Logo CBJ" width={160} height={80} className="object-contain" />
+          <Image src="/fpeju.jpg" alt="Logo FPEJU" width={100} height={50} className="object-contain" />
         </div>
-        <div className="mt-6 text-sm text-gray-300">
-          <Link href="/politica-de-privacidade" className="hover:underline mx-2">
+        
+        {/* Redes Sociais */}
+        <div className="flex justify-center space-x-8 mb-8">
+          <a 
+            href="https://www.instagram.com/ctferroviario2022" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="text-white hover:text-judo-orange transition-colors duration-300"
+            aria-label="Instagram"
+          >
+            <FontAwesomeIcon icon={faInstagram as any} className="w-8 h-8" />
+          </a>
+
+          <a 
+            href="https://wa.me/5581998264250" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="text-white hover:text-judo-orange transition-colors duration-300"
+            aria-label="WhatsApp"
+          >
+            <FontAwesomeIcon icon={faWhatsapp as any} className="w-8 h-8" />
+          </a>
+        </div>
+
+        {/* Links Legais e Área do Professor */}
+        <div className="flex flex-wrap justify-center gap-6 text-sm text-gray-300 mb-6">
+          <Link href="/politica-de-privacidade" className="hover:text-white transition-colors">
             Política de Privacidade
           </Link>
-          <Link href="/termos-de-uso" className="hover:underline mx-2">
+          <Link href="/termos-de-uso" className="hover:text-white transition-colors">
             Termos de Uso
           </Link>
+          {/* Link da Área do Professor adicionado abaixo */}
+          <Link href="/login" className="hover:text-judo-orange font-semibold transition-colors">
+            Área do Professor
+          </Link>
         </div>
-       <p className="text-sm md:text-base mb-4">
+
+        <p className="text-sm md:text-base text-gray-400">
           © {new Date().getFullYear()} Equipe CT Ferroviário Judô. Todos os direitos reservados.
         </p>
-         
       </div>
     </footer>
   );

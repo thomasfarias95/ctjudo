@@ -2,29 +2,39 @@ import Image from 'next/image';
 
 const About: React.FC = () => {
   return (
-    <section id="about" className="py-16 px-4 bg-judo-dark-gray text-judo-light-gray">
-      <div className="container mx-auto max-w-4xl text-center">
-        <h2 className="text-4xl font-bold mb-8 text-judo-blue">Sobre a Equipe CT Ferroviário de  Judô</h2>
-        <div className="md:flex md:items-center md:space-x-8">
-          <div className="md:w-1/2 mb-8 md:mb-0">
-            <Image
-              src="/ct.jpg" 
-              alt="Equipe CT Ferroviario de Judô"
-              width={500}
-              height={350}
-              className="rounded-lg shadow-lg mx-auto"
-            />
+    <section id="about" className="py-20 px-4 bg-white text-gray-800">
+      <div className="container mx-auto max-w-6xl">
+        <h2 className="text-4xl md:text-5xl font-bold mb-16 text-center text-judo-blue">
+          Sobre o CT Ferroviário
+        </h2>
+        
+        <div className="flex flex-col md:flex-row items-center gap-12">
+          {/* Imagem com efeito de borda suave */}
+          <div className="w-full md:w-1/2">
+            <div className="relative aspect-[4/3] w-full shadow-2xl rounded-2xl overflow-hidden">
+              <Image
+                src="/ct.jpg" 
+                alt="Equipe CT Ferroviário de Judô"
+                fill
+                style={{ objectFit: 'cover' }}
+                className="hover:scale-105 transition-transform duration-700"
+              />
+            </div>
           </div>
-          <div className="md:w-1/2 text-left">
-            <p className="text-lg leading-relaxed mb-4">
-              Fundada na decada de 70 pelo sensei Tavares, o Ferroviário Clube de Judô tem como missão promover o judô como ferramenta de desenvolvimento humano integral. Nossos mestres e instrutores são dedicados a transmitir não apenas as técnicas de luta, mas também os princípios milenares de disciplina, respeito, ética e autoconfiança que são a base do judô.
-            </p>
-            <p className="text-lg leading-relaxed mb-4">
-              Acreditamos que o judô é para todos, independentemente da idade, gênero ou nível de experiência. Nossos treinos são cuidadosamente adaptados para garantir o aprendizado e a evolução de cada aluno, em um ambiente seguro, acolhedor e desafiador.
+
+          {/* Texto com tipografia mais confortável */}
+          <div className="w-full md:w-1/2 space-y-6">
+            <p className="text-lg leading-relaxed">
+              Fundado na década de 70 pelo <strong>Sensei Tavares</strong>, o Ferroviário Clube de Judô carrega um legado de honra e tradição. Nossa missão é promover o judô como uma ferramenta de desenvolvimento humano integral, moldando não apenas atletas, mas cidadãos.
             </p>
             <p className="text-lg leading-relaxed">
-              Venha fazer parte da nossa família no tatame e descubra o poder transformador do judô!
+              Nossos mestres transmitem os princípios milenares de disciplina, respeito e ética — a verdadeira base do Caminho Suave (Ju-do). Acreditamos que o judô é para todos, e por isso criamos um ambiente seguro e acolhedor, onde cada aluno evolui no seu próprio ritmo.
             </p>
+            <div className="pt-4 border-l-4 border-judo-orange pl-4 italic text-gray-600">
+              <p className="text-lg font-medium">
+                "Venha fazer parte da nossa família no tatame e descubra o poder transformador do Judô."
+              </p>
+            </div>
           </div>
         </div>
       </div>

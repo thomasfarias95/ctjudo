@@ -36,3 +36,7 @@ a {
 * {
   box-sizing: border-box;
 }
+.status-inadimplente {
+    color: black !important; /* O !important garante que sobrescreva qualquer outro estilo */
+    font-weight: bold;      /* Opcional: ajuda na legibilidade */
+}

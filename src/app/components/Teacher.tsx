@@ -1,52 +1,53 @@
+"use client";
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 
-interface ClassType {
-  title: string;
-  description: string;
-  beltSystem: string;
-  image: string;
+interface Professor {
+  id: number;
+  nomeCompleto: string;
+  graduacao: string;
+  fotoUrl: string;
 }
 
-const classTypes: ClassType[] = [
-  
-  {
-   title: 'Sensei Tito',
-    description: 'Com mais de 30 anos de experiencia de aula em Judô',
-    beltSystem: '5º dan',
-    image: "/profaldisio.jpg",
-  },
-  
-];
+const Teacher: React.FC = () => {
+  const [professores, setProfessores] = useState<Professor[]>([]);
+  const [loading, setLoading] = useState(true);
 
-const Classes: React.FC = () => {
+  useEffect(() => {
+    fetch('http://localhost:8080/api/professores')
+      .then((res) => res.json())
+      .then((data) => setProfessores(data))
+      .catch((err) => console.error(err))
+      .finally(() => setLoading(false));
+  }, []);
+
   return (
-    <section id="teacher" className="py-16 px-4 bg-gray text-judo-light-gray">
-  <div className="container mx-auto max-w-5xl text-center">
-    <h2 className="text-4xl font-bold mb-12 text-judo-blue">Sensei</h2>
-    <div className="flex justify-center">
-      {classTypes.map((classInfo, index) => (
-        <div key={index} className="bg-judo-light-gray p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300 transform hover:-translate-y-2 max-w-md">
-          <div className="relative h-72 w-full mb-4 rounded-md overflow-hidden">
-            <Image
-              src={classInfo.image || "/imagens/padrao.jpg"}
-              alt={classInfo.title || "Imagem da aula"}
-              layout="fill"
-              objectFit="cover"
-              className="rounded-md"
-            />
+    <section className="py-16 bg-gray-100">
+      <div className="container mx-auto text-center">
+        <h2 className="text-4xl font-bold mb-12 text-blue-700">Nossos Senseis</h2>
+        {loading ? <p>Carregando...</p> : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 justify-items-center">
+            {professores.map((prof) => (
+              <div key={prof.id} className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+                <div className="relative h-64 w-full mb-4 rounded-lg overflow-hidden bg-gray-200">
+                 <Image
+                   src={prof.fotoUrl ? `/${prof.fotoUrl.split('/').pop()}` : "/padrao.jpg"} 
+                   alt={prof.nomeCompleto}
+                   fill
+                   style={{ objectFit: 'cover', objectPosition: 'top' }} // 'top' ajuda a não cortar a cabeça do Sensei
+                   sizes="(max-width: 768px) 100vw, 33vw"
+                   className="transition-transform duration-500 hover:scale-105"
+                     />
+                    </div>
+                <h3 className="text-2xl font-semibold text-orange-600">{prof.nomeCompleto}</h3>
+                <p className="text-gray-600">Graduação: {prof.graduacao}</p>
+              </div>
+            ))}
           </div>
-          <h3 className="text-2xl font-semibold mb-3 text-judo-orange">{classInfo.title}</h3>
-          <p className="text-lg leading-relaxed mb-4">{classInfo.description}</p>
-          <p className="font-semibold text-judo-blue">
-            Graduação: <span className="font-normal">{classInfo.beltSystem}</span>
-          </p>
-        </div>
-      ))}
-    </div>
-  </div>
-</section>
-
+        )}
+      </div>
+    </section>
   );
 };
 
-export default Classes;
+export default Teacher;
