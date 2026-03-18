@@ -124,7 +124,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      <h2 className="text-xl font-bold mb-4 text-blue-900">Alunos com Pendência</h2>
+      <h2 className="text-xl font-bold mb-4 text-white-900">Alunos com Pendência</h2>
       <div className="bg-white shadow rounded-2xl overflow-hidden border">
         <table className="w-full">
           <thead className="bg-gray-50">
