@@ -17,6 +17,9 @@ export default function Dashboard() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [mostrarLista, setMostrarLista] = useState(false);
 
+  // Define a URL da API (Render)
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://ct-ferroviario.onrender.com';
+
   useEffect(() => {
     const user = localStorage.getItem('user');
     if (!user) {
@@ -29,7 +32,8 @@ export default function Dashboard() {
   const carregarDados = async () => {
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:8080/api/pagamentos'); 
+      // Atualizado para usar API_URL
+      const res = await fetch(`${API_URL}/api/pagamentos`); 
       if (!res.ok) throw new Error("Erro ao conectar ao backend");
       const data = await res.json();
       setPagamentos(data);
@@ -42,7 +46,8 @@ export default function Dashboard() {
 
   const confirmarPagamento = async (id: number) => {
     try {
-      const res = await fetch(`http://localhost:8080/api/pagamentos/confirmar/${id}`, { 
+      // Atualizado para usar API_URL
+      const res = await fetch(`${API_URL}/api/pagamentos/confirmar/${id}`, { 
         method: 'PUT' 
       });
       
@@ -64,10 +69,10 @@ export default function Dashboard() {
   const formatarData = (dataStr: string) => {
     if (!dataStr) return "--/--";
     const partes = dataStr.split('-');
+    // Garante que mostre no formato brasileiro DD/MM
     return `${partes[2]}/${partes[1]}`;
   };
 
-  // Lógica para verificar se o pagamento está atrasado
   const isVencido = (dataVencimento: string, pago: boolean) => {
     if (pago) return false;
     const hoje = new Date();
@@ -81,7 +86,7 @@ export default function Dashboard() {
   const emDia = pagamentos.filter(p => p.pago === true).length;
   const inadimplentes = pagamentos.filter(p => p.pago === false);
 
-  if (loading) return <div className="p-8 text-center text-blue-900 font-bold">Carregando painel...</div>;
+  if (loading) return <div className="p-8 text-center text-blue-900 font-bold animate-pulse">Carregando painel financeiro...</div>;
 
   return (
     <div className="p-8 max-w-5xl mx-auto text-black">
@@ -89,7 +94,7 @@ export default function Dashboard() {
         <h1 className="text-3xl font-bold text-blue-900">Painel Financeiro - Sensei</h1>
         <div className="flex gap-4">
           <button onClick={() => setIsModalOpen(true)} className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"> + Novo Cadastro </button>
-          <button onClick={logout} className="text-gray-500 hover:text-red-600 transition">Sair</button>
+          <button onClick={logout} className="text-gray-500 hover:text-red-600 transition font-medium">Sair</button>
         </div>
       </div>
       
@@ -107,7 +112,7 @@ export default function Dashboard() {
           <ul className="divide-y">
             {pagamentos.map(p => (
               <li key={p.id} className="py-3 flex justify-between items-center">
-                <span>{p.atleta?.nomeCompleto || `Atleta ID: ${p.id}`}</span>
+                <span className="font-medium">{p.atleta?.nomeCompleto || `Atleta ID: ${p.id}`}</span>
                 <div className="flex items-center gap-4">
                   <span className={`font-bold ${p.pago ? 'text-green-600' : 'text-red-600'}`}>
                     {p.pago ? 'PAGO' : 'PENDENTE'}
@@ -119,7 +124,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      <h2 className="text-xl font-bold mb-4 text-white">Alunos com Pendência</h2>
+      <h2 className="text-xl font-bold mb-4 text-blue-900">Alunos com Pendência</h2>
       <div className="bg-white shadow rounded-2xl overflow-hidden border">
         <table className="w-full">
           <thead className="bg-gray-50">
@@ -138,11 +143,11 @@ export default function Dashboard() {
                     {p.atleta?.nomeCompleto || "Carregando..."}
                     {atrasado && <span className="ml-2 text-[10px] font-bold text-red-600 uppercase border border-red-600 px-1 rounded">Atrasado</span>}
                   </td>
-                  <td className={`p-4 ${atrasado ? 'text-red-700 font-bold' : ''}`}>
+                  <td className={`p-4 ${atrasado ? 'text-red-700 font-bold' : 'text-gray-700'}`}>
                     {formatarData(p.dataVencimento)}
                   </td>
                   <td className="p-4 text-center">
-                    <button onClick={() => confirmarPagamento(p.id)} className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition">
+                    <button onClick={() => confirmarPagamento(p.id)} className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition font-bold shadow-sm">
                       Dar Baixa
                     </button>
                   </td>
@@ -151,11 +156,20 @@ export default function Dashboard() {
             })}
           </tbody>
         </table>
+        {inadimplentes.length === 0 && (
+            <div className="p-8 text-center text-gray-500">Nenhuma pendência encontrada!</div>
+        )}
       </div>
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white p-6 rounded-2xl w-full max-w-md shadow-2xl">
+          <div className="bg-white p-6 rounded-2xl w-full max-w-md shadow-2xl relative">
+            <button 
+              onClick={() => setIsModalOpen(false)} 
+              className="absolute top-4 right-4 text-gray-400 hover:text-black"
+            >
+              ✕
+            </button>
             <h2 className="text-xl font-bold mb-4 text-black">Novo Cadastro</h2>
             <CadastroUsuarioForm onClose={() => setIsModalOpen(false)} onSuccess={() => { carregarDados(); setIsModalOpen(false); }} />
           </div>
@@ -166,6 +180,15 @@ export default function Dashboard() {
 }
 
 function ResumoCard({ titulo, valor, cor }: { titulo: string, valor: number, cor: 'blue' | 'green' | 'red' }) {
-  const cores = { blue: 'bg-blue-100 text-blue-800 border-blue-200', green: 'bg-green-100 text-green-800 border-green-200', red: 'bg-red-100 text-red-800 border-red-200' };
-  return (<div className={`${cores[cor]} p-6 rounded-xl border shadow-sm`}><p className="font-semibold">{titulo}</p><p className="text-3xl font-bold">{valor}</p></div>);
+  const cores = { 
+    blue: 'bg-blue-50 text-blue-800 border-blue-200', 
+    green: 'bg-green-50 text-green-800 border-green-200', 
+    red: 'bg-red-50 text-red-800 border-red-200' 
+  };
+  return (
+    <div className={`${cores[cor]} p-6 rounded-xl border shadow-sm transition-transform hover:scale-105`}>
+      <p className="font-semibold text-sm uppercase opacity-80">{titulo}</p>
+      <p className="text-4xl font-bold mt-1">{valor}</p>
+    </div>
+  );
 }

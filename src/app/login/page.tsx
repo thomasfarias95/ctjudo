@@ -9,14 +9,17 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
+  // Puxa a URL da Vercel (Production) ou usa o Render como fallback
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://ct-ferroviario.onrender.com';
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
     try {
-      // Requisição para o seu Controller Java que já confirmamos estar funcionando
-      const res = await fetch('http://localhost:8080/api/auth/login', {
+      // Ajustado: agora usa a variável API_URL em vez de localhost
+      const res = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json' 
@@ -55,7 +58,7 @@ export default function LoginPage() {
         <input 
           type="email" 
           placeholder="E-mail" 
-          className="w-full p-3 mb-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full p-3 mb-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
