@@ -10,7 +10,7 @@ export default function CadastroUsuarioForm({ onClose, onSuccess }: CadastroProp
   const [formData, setFormData] = useState({
     nomeCompleto: '',
     email: '',
-    senha: '123', // Senha padrão inicial
+    senha: '123', // Senha padrão para o primeiro acesso do aluno/pai
     dataNascimento: '',
     sexo: 'M',
     turno: 'MANHA',
@@ -37,74 +37,83 @@ export default function CadastroUsuarioForm({ onClose, onSuccess }: CadastroProp
       });
 
       if (res.ok) {
-        alert("Atleta matriculado com sucesso!");
+        alert("Matrícula realizada com sucesso!");
         onSuccess();
       } else {
-        alert("Erro ao matricular atleta.");
+        const errorMsg = await res.text();
+        alert("Erro ao cadastrar: " + errorMsg);
       }
     } catch (err) {
       console.error("Erro no cadastro:", err);
+      alert("Erro de conexão com o servidor do Render.");
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
-      <div>
-        <label className="block text-sm font-bold text-gray-700">Nome Completo do Aluno</label>
-        <input type="text" name="nomeCompleto" required onChange={handleChange} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-black" placeholder="Ex: João Silva" />
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-bold text-gray-700">Nascimento</label>
-          <input type="date" name="dataNascimento" required onChange={handleChange} className="w-full p-2 border rounded-lg text-black" />
+    <form onSubmit={handleSubmit} className="space-y-5 text-black">
+      {/* Dados do Aluno */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="md:col-span-2">
+          <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Nome do Judoca</label>
+          <input type="text" name="nomeCompleto" required onChange={handleChange} className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none transition" placeholder="Nome Completo" />
         </div>
+        
         <div>
-          <label className="block text-sm font-bold text-gray-700">Sexo</label>
-          <select name="sexo" onChange={handleChange} className="w-full p-2 border rounded-lg text-black">
+          <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Nascimento</label>
+          <input type="date" name="dataNascimento" required onChange={handleChange} className="w-full p-3 border border-gray-200 rounded-xl text-sm" />
+        </div>
+
+        <div>
+          <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Sexo</label>
+          <select name="sexo" onChange={handleChange} className="w-full p-3 border border-gray-200 rounded-xl text-sm">
             <option value="M">Masculino</option>
             <option value="F">Feminino</option>
-            <option value="O">Outro</option>
           </select>
         </div>
       </div>
 
-      <div>
-        <label className="block text-sm font-bold text-gray-700">Nome do Responsável (Obrigatório para Kids)</label>
-        <input type="text" name="nomeResponsavel" required onChange={handleChange} className="w-full p-2 border rounded-lg text-black" placeholder="Nome do Pai ou Mãe" />
+      <hr className="border-gray-100" />
+
+      {/* Dados de Contato e Logística */}
+      <div className="space-y-4">
+        <div>
+          <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Responsável (Pai/Mãe)</label>
+          <input type="text" name="nomeResponsavel" required onChange={handleChange} className="w-full p-3 border border-gray-200 rounded-xl" placeholder="Quem responde pelo aluno?" />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">WhatsApp do Responsável</label>
+            <input type="text" name="telefone" required onChange={handleChange} className="w-full p-3 border border-gray-200 rounded-xl" placeholder="(81) 9...." />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Turno de Aula</label>
+            <select name="turno" onChange={handleChange} className="w-full p-3 border border-gray-200 rounded-xl text-sm">
+              <option value="MANHA">Manhã</option>
+              <option value="TARDE">Tarde</option>
+              <option value="NOITE">Noite</option>
+            </select>
+          </div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-4 bg-blue-50 p-4 rounded-2xl">
         <div>
-          <label className="block text-sm font-bold text-gray-700">Turno de Treino</label>
-          <select name="turno" onChange={handleChange} className="w-full p-2 border rounded-lg text-black">
-            <option value="MANHA">Manhã</option>
-            <option value="TARDE">Tarde</option>
-            <option value="NOITE">Noite</option>
-          </select>
+          <label className="block text-xs font-bold text-blue-900 uppercase mb-1">Dia Vencimento</label>
+          <input type="number" name="diaVencimento" defaultValue={10} min={1} max={28} onChange={handleChange} className="w-full p-2 border border-blue-200 rounded-lg text-sm" />
         </div>
         <div>
-          <label className="block text-sm font-bold text-gray-700">Dia de Vencimento</label>
-          <input type="number" name="diaVencimento" defaultValue={10} min={1} max={28} onChange={handleChange} className="w-full p-2 border rounded-lg text-black" />
+          <label className="block text-xs font-bold text-blue-900 uppercase mb-1">E-mail de Acesso</label>
+          <input type="email" name="email" required onChange={handleChange} className="w-full p-2 border border-blue-200 rounded-lg text-sm" placeholder="email@exemplo.com" />
         </div>
       </div>
 
-      <div>
-        <label className="block text-sm font-bold text-gray-700">WhatsApp / Telefone</label>
-        <input type="text" name="telefone" required onChange={handleChange} className="w-full p-2 border rounded-lg text-black" placeholder="(81) 9...." />
-      </div>
-
-      <div>
-        <label className="block text-sm font-bold text-gray-700">E-mail (Para Login)</label>
-        <input type="email" name="email" required onChange={handleChange} className="w-full p-2 border rounded-lg text-black" placeholder="email@exemplo.com" />
-      </div>
-
-      <div className="flex gap-3 pt-4">
-        <button type="button" onClick={onClose} className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-100 font-bold transition text-gray-600">
+      <div className="flex gap-4 pt-4">
+        <button type="button" onClick={onClose} className="flex-1 px-4 py-3 text-gray-400 font-bold hover:text-gray-600 transition">
           Cancelar
         </button>
-        <button type="submit" className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-bold shadow-md transition">
-          Confirmar Matrícula
+        <button type="submit" className="flex-1 px-4 py-3 bg-blue-900 text-white rounded-2xl font-black shadow-lg hover:bg-blue-800 transition uppercase tracking-wide">
+          Salvar Matrícula
         </button>
       </div>
     </form>
