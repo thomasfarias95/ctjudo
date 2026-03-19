@@ -44,7 +44,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-4">
       
-      {/* BOTÃO VOLTAR - FONTE BLACK E DESTAQUE */}
+      {/* BOTÃO VOLTAR - AJUSTADO PARA MELHOR LEITURA */}
       <div className="w-full max-w-sm mb-6 flex justify-start">
         <Link 
           href="/" 
@@ -57,7 +57,6 @@ export default function LoginPage() {
 
       <form onSubmit={handleLogin} className="bg-white p-10 rounded-[2.5rem] shadow-2xl w-full max-w-sm border border-gray-200">
         
-        {/* Logo do CT Ferroviário */}
         <div className="flex justify-center mb-8">
           <Image 
             src="/logo.png" 
@@ -95,7 +94,7 @@ export default function LoginPage() {
             <label className="block text-[10px] font-black text-gray-400 uppercase mb-2 ml-1 tracking-widest text-left">Senha</label>
             <input 
               type="password" 
-              placeholder="••••••••" 
+              placeholder="Ex: aldisio2026" // AJUDANDO O PROFESSOR A LEMBRAR O PADRÃO
               className="w-full p-4 border-2 border-gray-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-100 text-black transition font-bold"
               value={senha}
               onChange={(e) => setSenha(e.target.value)}
