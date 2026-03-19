@@ -18,7 +18,8 @@ const Navbar: React.FC = () => {
 
   return (
     <>
-      <nav className="bg-white/95 backdrop-blur-sm text-black p-4 fixed top-0 w-full z-50 shadow-md h-20 flex items-center">
+      {/* Navbar Principal */}
+      <nav className="bg-white text-black p-4 fixed top-0 w-full z-[60] shadow-md h-20 flex items-center">
         <div className="container mx-auto flex justify-between items-center px-4">
           <Link href="/" onClick={closeMenu}>
             <Image
@@ -48,37 +49,41 @@ const Navbar: React.FC = () => {
             ))}
           </div>
 
-          {/* Botão Mobile (Hambúrguer) */}
+          {/* Botão Mobile - Aumentado o Z-index para ficar sempre no topo */}
           <div className="md:hidden flex items-center">
             <button
               onClick={toggleMenu}
-              className="text-black p-2 focus:outline-none z-[60]"
+              className="text-black p-2 focus:outline-none z-[100] relative" 
               aria-label={isOpen ? "Fechar menu" : "Abrir menu"}
             >
               {isOpen ? (
-                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                <svg className="w-9 h-9 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                </svg>
               ) : (
-                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" /></svg>
+                <svg className="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16m-7 6h7" />
+                </svg>
               )}
             </button>
           </div>
         </div>
 
-        {/* Overlay do Menu Mobile */}
+        {/* Overlay Escuro - Z-index logo abaixo do menu lateral */}
         <div 
-          className={`fixed inset-0 bg-black/50 transition-opacity duration-300 md:hidden ${isOpen ? "opacity-100 visible" : "opacity-0 invisible"}`} 
+          className={`fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 md:hidden z-[70] ${isOpen ? "opacity-100 visible" : "opacity-0 invisible"}`} 
           onClick={closeMenu}
         />
 
-        {/* Menu Lateral (Drawer) Mobile */}
-        <div className={`fixed top-0 right-0 h-full w-64 bg-white shadow-2xl transform transition-transform duration-300 ease-in-out z-50 md:hidden ${isOpen ? "translate-x-0" : "translate-x-full"}`}>
-          <div className="flex flex-col p-8 pt-24 space-y-6">
+        {/* Menu Lateral (Drawer) - Z-index entre o overlay e o botão */}
+        <div className={`fixed top-0 right-0 h-full w-72 bg-white shadow-2xl transform transition-transform duration-300 ease-in-out z-[80] md:hidden ${isOpen ? "translate-x-0" : "translate-x-full"}`}>
+          <div className="flex flex-col p-8 pt-28 space-y-6">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
                 onClick={closeMenu}
-                className="text-xl font-semibold text-gray-800 hover:text-orange-600 border-b pb-2"
+                className="text-2xl font-bold text-gray-900 hover:text-orange-600 border-b border-gray-100 pb-4 transition-all"
               >
                 {link.label}
               </Link>
@@ -86,7 +91,6 @@ const Navbar: React.FC = () => {
           </div>
         </div>
       </nav>
-      {/* O padding-top no main continua sendo essencial no page.tsx! */}
     </>
   );
 };
