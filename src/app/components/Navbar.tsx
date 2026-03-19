@@ -9,16 +9,17 @@ const Navbar: React.FC = () => {
   const closeMenu = () => setIsOpen(false);
   const toggleMenu = () => setIsOpen(!isOpen);
 
+  // Alterado para caminhos absolutos (/#id) para funcionar a partir de qualquer página
   const navLinks = [
-    { href: "#about", label: "Sobre Nós" },
-    { href: "#teacher", label: "Sensei" },
-    { href: "#classes", label: "Aulas" },
-    { href: "#contact", label: "Contato" },
+    { href: "/#about", label: "Sobre Nós" },
+    { href: "/#teacher", label: "Sensei" }, // Verifique se o ID na Home é 'teacher'
+    { href: "/#classes", label: "Aulas" },
+    { href: "/#contact", label: "Contato" },
+    { href: "/login", label: "Área Restrita" }, // Adicionado para facilitar o acesso
   ];
 
   return (
     <>
-      {/* Navbar Principal */}
       <nav className="bg-white text-black p-4 fixed top-0 w-full z-[60] shadow-md h-20 flex items-center">
         <div className="container mx-auto flex justify-between items-center px-4">
           <Link href="/" onClick={closeMenu}>
@@ -49,7 +50,7 @@ const Navbar: React.FC = () => {
             ))}
           </div>
 
-          {/* Botão Mobile - Aumentado o Z-index para ficar sempre no topo */}
+          {/* Botão Mobile */}
           <div className="md:hidden flex items-center">
             <button
               onClick={toggleMenu}
@@ -69,13 +70,13 @@ const Navbar: React.FC = () => {
           </div>
         </div>
 
-        {/* Overlay Escuro - Z-index logo abaixo do menu lateral */}
+        {/* Overlay Escuro */}
         <div 
           className={`fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 md:hidden z-[70] ${isOpen ? "opacity-100 visible" : "opacity-0 invisible"}`} 
           onClick={closeMenu}
         />
 
-        {/* Menu Lateral (Drawer) - Z-index entre o overlay e o botão */}
+        {/* Menu Lateral (Drawer) */}
         <div className={`fixed top-0 right-0 h-full w-72 bg-white shadow-2xl transform transition-transform duration-300 ease-in-out z-[80] md:hidden ${isOpen ? "translate-x-0" : "translate-x-full"}`}>
           <div className="flex flex-col p-8 pt-28 space-y-6">
             {navLinks.map((link) => (
