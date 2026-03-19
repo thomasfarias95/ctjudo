@@ -27,33 +27,40 @@ const Teacher: React.FC = () => {
   }, [API_URL]);
 
   return (
-    <section className="py-16 bg-gray-100">
+    // ADICIONADO: id="teacher" e scroll-mt-20 para compensar a altura do Navbar fixo
+    <section id="teacher" className="py-16 bg-gray-100 scroll-mt-20">
       <div className="container mx-auto px-4 text-center">
-        <h2 className="text-4xl font-bold mb-12 text-blue-700">Nossos Senseis</h2>
+        <h2 className="text-4xl font-black mb-12 text-blue-900 uppercase tracking-tighter">
+          Nossos Senseis
+        </h2>
         
         {loading ? (
-          <p className="text-gray-500 animate-pulse">Carregando Senseis...</p>
+          <p className="text-gray-500 animate-pulse font-bold">Sincronizando tatame...</p>
         ) : professores.length === 0 ? (
-          <p className="text-gray-500">Nenhum professor encontrado no sistema.</p>
+          <p className="text-gray-500 font-medium">Nenhum professor encontrado no sistema.</p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 justify-items-center">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 justify-items-center">
             {professores.map((prof) => (
-              <div key={prof.id} className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
-                <div className="relative h-80 w-full mb-4 rounded-lg overflow-hidden bg-gray-200">
+              <div key={prof.id} className="bg-white p-8 rounded-[2rem] shadow-xl w-full max-w-md border border-gray-200 transition-transform hover:-translate-y-2">
+                <div className="relative h-96 w-full mb-6 rounded-2xl overflow-hidden bg-gray-200 shadow-inner">
                   <Image
-                    // Tenta usar a URL da API, se falhar ou não existir, usa o nome do arquivo na pasta public
                     src={prof.fotoUrl.startsWith('http') 
                       ? prof.fotoUrl 
                       : `/${prof.fotoUrl.split('/').pop()}` || "/padrao.jpg"} 
                     alt={prof.nomeCompleto}
                     fill
                     sizes="(max-width: 768px) 100vw, 400px"
-                    className="object-cover object-top transition-transform duration-500 hover:scale-105"
-                    priority={prof.id <= 2} // Carrega as primeiras imagens com prioridade
+                    className="object-cover object-top transition-transform duration-700 hover:scale-110"
+                    priority={prof.id <= 2}
                   />
                 </div>
-                <h3 className="text-2xl font-semibold text-orange-600">{prof.nomeCompleto}</h3>
-                <p className="text-gray-600 font-medium">{prof.graduacao}</p>
+                {/* Estilo em sintonia com o resto do sistema (Fonte Black/Bold) */}
+                <h3 className="text-2xl font-black text-blue-900 uppercase tracking-tight italic">
+                  {prof.nomeCompleto}
+                </h3>
+                <p className="text-orange-600 font-black uppercase text-xs tracking-[0.2em] mt-2">
+                  {prof.graduacao}
+                </p>
               </div>
             ))}
           </div>

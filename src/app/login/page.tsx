@@ -48,7 +48,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm mb-6 flex justify-start">
         <Link 
           href="/" 
-          className="group flex items-center bg-orange px-5 py-3 rounded-2xl shadow-md border border-gray-200 text-blue-900 hover:bg-blue-900 hover:text-white transition-all duration-300 font-black uppercase text-xs tracking-widest"
+          className="group flex items-center bg-black px-5 py-3 rounded-2xl shadow-md border border-gray-200 text-blue-900 hover:bg-blue-900 hover:text-white transition-all duration-300 font-black uppercase text-xs tracking-widest"
         >
           <span className="mr-2 transform group-hover:-translate-x-1 transition-transform">←</span> 
           Voltar ao Início
