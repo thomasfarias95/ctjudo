@@ -20,14 +20,33 @@ export default function DashboardAtletas() {
 
   useEffect(() => { fetchAtletas(); }, []);
 
-  // --- LÓGICA DE CÁLCULO PARA OS GRÁFICOS ---
-  const total = atletas.length || 1; // evita divisão por zero
+  // --- LÓGICA DE BAIXA MANUAL (AGORA FUNCIONA) ---
+  const handleBaixaPagamento = (id: number) => {
+    setAtletas(prev => prev.map(a => 
+      a.id === id ? { ...a, statusPagamento: 'EM_DIA' } : a
+    ));
+    // Aqui você pode adicionar a chamada de API se tiver o endpoint de financeiro
+  };
+
+  // --- LÓGICA ON/OFF (REINTEGRADA) ---
+  const handleToggleStatus = async (id: number, statusAtual: any) => {
+    const novoStatus = statusAtual === false; // Inverte o booleano
+    try {
+      await updateAtletaStatus(id, novoStatus);
+      setAtletas(prev => prev.map(a => a.id === id ? { ...a, ativo: novoStatus } : a));
+    } catch (err) {
+      alert("Erro ao alterar status.");
+    }
+  };
+
+  if (loading) return <div className="p-6 text-center text-blue-900 font-black italic animate-pulse">CARREGANDO DOJO...</div>;
+
+  // CÁLCULOS PARA OS GRÁFICOS
+  const total = atletas.length || 1;
   const masc = atletas.filter(a => a.genero === 'MASCULINO' || a.sexo === 'M').length;
   const fem = atletas.filter(a => a.genero === 'FEMININO' || a.sexo === 'F').length;
   const ativos = atletas.filter(a => a.ativo !== false).length;
   const emDia = atletas.filter(a => a.statusPagamento === 'EM_DIA').length;
-
-  // Porcentagens para os gráficos
   const percMasc = (masc / total) * 100;
   const percFem = (fem / total) * 100;
   const percFinanceiro = (emDia / total) * 100;
@@ -36,86 +55,69 @@ export default function DashboardAtletas() {
     <div className="p-4 md:p-8 bg-gray-100 min-h-screen text-black font-sans text-left">
       
       {/* HEADER */}
-      <div className="mb-8 flex justify-between items-end">
+      <div className="mb-6 flex justify-between items-end border-b border-gray-200 pb-4">
         <div>
-          <h1 className="text-3xl font-black text-blue-900 uppercase italic tracking-tighter">CT FERROVIÁRIO</h1>
-          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Logística e Gestão • Sensei Aldisio</p>
+          <h1 className="text-3xl font-black text-blue-900 uppercase italic tracking-tighter leading-none">CT FERROVIÁRIO</h1>
+          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Gestão de Judô </p>
         </div>
+        <button onClick={() => window.location.href = '/'} className="text-red-500 text-[10px] font-black uppercase hover:underline">Sair</button>
       </div>
 
-      {/* --- SEÇÃO DE GRÁFICOS E INDICADORES --- */}
+      {/* GRÁFICOS E INDICADORES */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         
-        {/* GRÁFICO 1: DISTRIBUIÇÃO POR GÊNERO */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
-          <p className="text-[10px] font-black text-gray-400 uppercase mb-4 tracking-widest">Divisão por Gênero</p>
-          <div className="space-y-4">
+        {/* GRÁFICO GÊNERO */}
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
+          <p className="text-[9px] font-black text-gray-400 uppercase mb-3 tracking-widest">Distribuição por Gênero</p>
+          <div className="space-y-3">
             <div>
-              <div className="flex justify-between text-[11px] font-bold mb-1 uppercase">
-                <span>Masculino ({masc})</span>
-                <span>{percMasc.toFixed(0)}%</span>
-              </div>
-              <div className="w-full bg-gray-100 h-3 rounded-full overflow-hidden">
-                <div className="bg-blue-600 h-full transition-all duration-1000" style={{ width: `${percMasc}%` }}></div>
-              </div>
+              <div className="flex justify-between text-[10px] font-black mb-1 uppercase text-blue-700">♂ MASCULINO ({masc})</div>
+              <div className="w-full bg-gray-100 h-3 rounded-full overflow-hidden"><div className="bg-blue-600 h-full" style={{ width: `${percMasc}%` }}></div></div>
             </div>
             <div>
-              <div className="flex justify-between text-[11px] font-bold mb-1 uppercase">
-                <span>Feminino ({fem})</span>
-                <span>{percFem.toFixed(0)}%</span>
-              </div>
-              <div className="w-full bg-gray-100 h-3 rounded-full overflow-hidden">
-                <div className="bg-pink-500 h-full transition-all duration-1000" style={{ width: `${percFem}%` }}></div>
-              </div>
+              <div className="flex justify-between text-[10px] font-black mb-1 uppercase text-pink-600">♀ FEMININO ({fem})</div>
+              <div className="w-full bg-gray-100 h-3 rounded-full overflow-hidden"><div className="bg-pink-500 h-full" style={{ width: `${percFem}%` }}></div></div>
             </div>
           </div>
         </div>
 
-        {/* GRÁFICO 2: PERFORMANCE FINANCEIRA (EM LINHA) */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
-          <p className="text-[10px] font-black text-gray-400 uppercase mb-4 tracking-widest">Saúde Financeira (Mensal)</p>
-          <div className="flex items-end gap-2 mb-2">
-            <span className="text-3xl font-black text-emerald-600 leading-none">{percFinanceiro.toFixed(0)}%</span>
-            <span className="text-[10px] font-bold text-gray-400 uppercase pb-1">Recebido</span>
+        {/* FINANCEIRO EM LINHA */}
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
+          <p className="text-[9px] font-black text-gray-400 uppercase mb-3 tracking-widest">Saúde Financeira ({percFinanceiro.toFixed(0)}%)</p>
+          <div className="w-full bg-red-100 h-8 rounded-lg overflow-hidden flex mb-2">
+            <div className="bg-emerald-500 h-full transition-all" style={{ width: `${percFinanceiro}%` }}></div>
           </div>
-          <div className="w-full bg-gray-100 h-6 rounded-lg overflow-hidden flex">
-            <div className="bg-emerald-500 h-full" style={{ width: `${percFinanceiro}%` }}></div>
-            <div className="bg-red-200 h-full flex-1"></div>
-          </div>
-          <div className="flex justify-between mt-3 text-[9px] font-black uppercase tracking-tighter">
-            <span className="text-emerald-700">Em dia: {emDia}</span>
-            <span className="text-red-600">Pendentes: {total - emDia}</span>
+          <div className="flex justify-between text-[9px] font-black uppercase tracking-tighter">
+            <span className="text-emerald-700">EM DIA: {emDia}</span>
+            <span className="text-red-600">PENDENTE: {total - emDia}</span>
           </div>
         </div>
 
-        {/* GRÁFICO 3: PRESENÇA / ATIVOS */}
-        <div className="bg-blue-900 p-6 rounded-2xl shadow-lg text-white flex flex-col justify-between">
-          <div>
-            <p className="text-[9px] font-black uppercase tracking-widest opacity-60 mb-1">Status de Matrículas</p>
-            <h2 className="text-4xl font-black italic">{ativos}</h2>
-            <p className="text-[10px] font-bold uppercase opacity-80">Alunos no Tatame</p>
+        {/* STATUS GERAL E AÇÃO */}
+        <div className="bg-blue-900 p-5 rounded-2xl shadow-lg text-white flex flex-col justify-between">
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-[9px] font-black uppercase tracking-widest opacity-60">Total de Atletas</p>
+              <h2 className="text-3xl font-black italic">{total}</h2>
+            </div>
+            <div className="text-right">
+              <p className="text-[9px] font-black uppercase tracking-widest opacity-60">Ativos</p>
+              <h2 className="text-3xl font-black italic text-green-400">{ativos}</h2>
+            </div>
           </div>
-          <button 
-            onClick={() => setIsModalOpen(true)}
-            className="mt-4 bg-white text-blue-900 text-[10px] font-black uppercase py-3 rounded-lg hover:bg-blue-50 transition-all shadow-md active:scale-95"
-          >
-            + Nova Matrícula / Professor
-          </button>
+          <button onClick={() => setIsModalOpen(true)} className="mt-4 bg-white text-blue-900 text-[10px] font-black uppercase py-2 rounded shadow-md hover:bg-blue-50">+ Nova Matrícula</button>
         </div>
       </div>
 
-      {/* --- TABELA DE GESTÃO --- */}
+      {/* TABELA COMPLETA */}
       <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200">
-        <div className="p-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
-          <h3 className="text-[11px] font-black uppercase tracking-widest text-blue-900 italic">Lista de Atletas do CT</h3>
-        </div>
         <table className="w-full text-left border-collapse">
           <thead className="bg-[#1e3a8a] text-white">
             <tr>
               <th className="p-4 font-bold uppercase text-[10px] tracking-widest">Atleta / Info</th>
               <th className="p-4 font-bold uppercase text-[10px] tracking-widest text-center">Vencimento</th>
               <th className="p-4 font-bold uppercase text-[10px] tracking-widest text-center">Status</th>
-              <th className="p-4 font-bold uppercase text-[10px] tracking-widest text-right">Ações</th>
+              <th className="p-4 font-bold uppercase text-[10px] tracking-widest text-right">Gestão</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -127,15 +129,21 @@ export default function DashboardAtletas() {
                 </td>
                 <td className="p-4 text-center font-bold text-gray-600 text-xs">Dia {atleta.diaVencimento || 28}</td>
                 <td className="p-4 text-center">
-                  <span className={`px-2 py-1 rounded text-[8px] font-black tracking-widest ${atleta.statusPagamento === 'EM_DIA' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                  <span className={`px-2 py-0.5 rounded text-[8px] font-black tracking-widest border ${atleta.statusPagamento === 'EM_DIA' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
                     {atleta.statusPagamento || 'PENDENTE'}
                   </span>
                 </td>
                 <td className="p-4 text-right">
                   <div className="flex justify-end gap-2">
-                    <button onClick={() => {/* função baixa */}} className="p-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 shadow-sm" title="Baixa Manual">✅</button>
-                    <button onClick={() => gerarDocumentoAtleta(atleta)} className="p-2 bg-blue-600 text-white rounded hover:bg-blue-700 shadow-sm" title="Carnê">💰</button>
-                    <button onClick={() => downloadRelatorioTecnico(atleta.id, atleta.nomeCompleto)} className="p-2 bg-gray-800 text-white rounded hover:bg-black shadow-sm" title="Técnico">🥋</button>
+                    <button onClick={() => handleBaixaPagamento(atleta.id)} className="p-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 shadow-sm" title="Dar Baixa">✅</button>
+                    <button onClick={() => gerarDocumentoAtleta(atleta)} className="p-2 bg-blue-600 text-white rounded hover:bg-blue-700 shadow-sm" title="Financeiro">💰</button>
+                    <button onClick={() => downloadRelatorioTecnico(atleta.id, atleta.nomeCompleto)} className="p-2 bg-slate-800 text-white rounded hover:bg-black shadow-sm" title="Técnico">🥋</button>
+                    <button 
+                      onClick={() => handleToggleStatus(atleta.id, atleta.ativo)}
+                      className={`px-2 py-1 rounded text-[10px] font-black text-white ${atleta.ativo !== false ? 'bg-red-500' : 'bg-green-600'}`}
+                    >
+                      {atleta.ativo !== false ? "OFF" : "ON"}
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -148,7 +156,13 @@ export default function DashboardAtletas() {
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-             {/* ... conteúdo do modal já enviado ... */}
+            <div className="bg-blue-900 p-4 text-white flex justify-between items-center sticky top-0 z-10">
+              <h3 className="font-black uppercase tracking-widest text-xs italic">Painel de Matrícula CT</h3>
+              <button onClick={() => setIsModalOpen(false)} className="text-white font-bold text-xl px-2">✕</button>
+            </div>
+            <div className="p-6">
+              <CadastroUsuarioForm onClose={() => setIsModalOpen(false)} onSuccess={() => { setIsModalOpen(false); fetchAtletas(); }} />
+            </div>
           </div>
         </div>
       )}
