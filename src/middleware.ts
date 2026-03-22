@@ -1,18 +1,15 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
   const token = request.cookies.get('auth_token');
   const { pathname } = request.nextUrl;
 
-  // 1. Liberação total para rotas públicas e recursos
-  if (
-    pathname === '/' || 
-    pathname === '/login' || // Se sua rota for /login, ajuste aqui
-    pathname.startsWith('/api') || 
-    pathname.startsWith('/_next') || 
-    pathname.includes('favicon.ico')
-  ) {
+  // 1. Liberação de rotas públicas, assets e internos
+  const isPublicRoute = pathname === '/' || pathname === '/login';
+  const isAsset = pathname.match(/\.(png|jpg|jpeg|gif|webp|svg|ico)$/);
+  const isInternal = pathname.startsWith('/_next') || pathname.startsWith('/api');
+
+  if (isPublicRoute || isAsset || isInternal) {
     return NextResponse.next();
   }
 
@@ -25,6 +22,6 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // O matcher deve excluir explicitamente arquivos estáticos
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  // Matcher refinado para ignorar arquivos estáticos e focar em rotas de páginas
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)'],
 };
