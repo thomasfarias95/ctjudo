@@ -88,7 +88,7 @@ export default function DashboardAtletas() {
       <div className="mb-6 flex justify-between items-end border-b border-gray-200 pb-4">
         <div>
           <h1 className="text-3xl font-black text-blue-900 uppercase italic tracking-tighter leading-none">CT FERROVIÁRIO</h1>
-          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Gestão de Judô • Sensei Aldisio</p>
+          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Gestão de Judô </p>
         </div>
         <button onClick={() => window.location.href = '/'} className="text-red-500 text-[10px] font-black uppercase hover:underline">Sair</button>
       </div>
