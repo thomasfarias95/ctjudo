@@ -13,31 +13,39 @@ export default function DashboardAtletas() {
 
   // --- FUNÇÃO DE LOGOUT (BLINDAGEM) ---
   const handleLogout = () => {
-    // 1. Mata o Cookie (fazendo ele expirar agora) para o Middleware barrar o acesso
     document.cookie = "auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
-    
-    // 2. Limpa os dados locais de sessão
     localStorage.removeItem('user');
     localStorage.removeItem('isLoggedIn');
-    
-    // 3. Manda para a tela de login (Raiz)
     window.location.href = '/';
   };
 
   const fetchAtletas = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cadastro/atletas?t=${new Date().getTime()}`);
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      const response = await fetch(`${apiUrl}/api/cadastro/atletas?t=${new Date().getTime()}`);
+      
+      if (!response.ok) {
+        throw new Error(`Erro na API: ${response.status}`);
+      }
+
       const data = await response.json();
-      setAtletas(data);
+      
+      // BLINDAGEM: Garante que 'atletas' sempre seja um Array
+      if (Array.isArray(data)) {
+        setAtletas(data);
+      } else {
+        console.error("Dados recebidos não são um array:", data);
+        setAtletas([]);
+      }
     } catch (error) { 
       console.error("Erro ao buscar atletas:", error); 
+      setAtletas([]); // Se falhar, mantém como array vazio para não quebrar o filter
     } finally { 
       setLoading(false); 
     }
   };
 
   useEffect(() => { 
-    // Segurança adicional: Se não houver registro de login no navegador, expulsa
     const loggedIn = localStorage.getItem('isLoggedIn');
     if (!loggedIn) {
       window.location.href = '/';
@@ -65,15 +73,13 @@ export default function DashboardAtletas() {
           gerarReciboIndividual({ ...atletaAlvo, statusPagamento: 'EM_DIA' });
         }
       } else {
-        alert("O recibo foi gerado, mas o servidor Java não conseguiu salvar o status. Verifique o console do IntelliJ.");
+        alert("O recibo foi gerado, mas o servidor Java não conseguiu salvar o status.");
         if (atletaAlvo) gerarReciboIndividual({ ...atletaAlvo, statusPagamento: 'EM_DIA' });
       }
     } catch (error) {
       console.error("Erro de conexão:", error);
-      alert("SEM CONEXÃO: Recibo gerado offline. O status voltará a PENDENTE no F5 até que a conexão com o servidor Java seja restaurada.");
-      if (atletaAlvo) {
-        gerarReciboIndividual({ ...atletaAlvo, statusPagamento: 'EM_DIA' });
-      }
+      alert("SEM CONEXÃO: Recibo gerado offline.");
+      if (atletaAlvo) gerarReciboIndividual({ ...atletaAlvo, statusPagamento: 'EM_DIA' });
     }
   };
 
@@ -87,14 +93,19 @@ export default function DashboardAtletas() {
 
   if (loading) return <div className="p-6 text-center text-blue-900 font-black italic animate-pulse">CARREGANDO DOJO...</div>;
 
-  const total = atletas.length || 1;
-  const masc = atletas.filter(a => a.genero === 'MASCULINO' || a.sexo === 'M').length;
-  const fem = atletas.filter(a => a.genero === 'FEMININO' || a.sexo === 'F').length;
-  const ativos = atletas.filter(a => a.ativo !== false).length;
-  const emDia = atletas.filter(a => a.statusPagamento === 'EM_DIA').length;
-  const percMasc = (masc / total) * 100;
-  const percFem = (fem / total) * 100;
-  const percFinanceiro = (emDia / total) * 100;
+  // --- CÁLCULOS PROTEGIDOS (PREVENT "filter is not a function") ---
+  const listaSegura = Array.isArray(atletas) ? atletas : [];
+  const totalValido = listaSegura.length;
+  const divisor = totalValido > 0 ? totalValido : 1;
+
+  const masc = listaSegura.filter(a => a?.genero === 'MASCULINO' || a?.sexo === 'M').length;
+  const fem = listaSegura.filter(a => a?.genero === 'FEMININO' || a?.sexo === 'F').length;
+  const ativos = listaSegura.filter(a => a?.ativo !== false).length;
+  const emDia = listaSegura.filter(a => a?.statusPagamento === 'EM_DIA').length;
+
+  const percMasc = (masc / divisor) * 100;
+  const percFem = (fem / divisor) * 100;
+  const percFinanceiro = (emDia / divisor) * 100;
 
   return (
     <div className="p-4 md:p-8 bg-gray-100 min-h-screen text-black font-sans text-left">
@@ -104,7 +115,6 @@ export default function DashboardAtletas() {
           <h1 className="text-3xl font-black text-blue-900 uppercase italic tracking-tighter leading-none">CT FERROVIÁRIO</h1>
           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Gestão de Judô</p>
         </div>
-        {/* BOTÃO SAIR ATUALIZADO */}
         <button 
           onClick={handleLogout} 
           className="bg-red-50 text-red-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-red-600 hover:text-white transition-all border border-red-100"
@@ -140,13 +150,13 @@ export default function DashboardAtletas() {
           </div>
           <div className="flex justify-between text-[9px] font-black uppercase tracking-tighter">
             <span className="text-emerald-700">EM DIA: {emDia}</span>
-            <span className="text-red-600">PENDENTE: {total - emDia}</span>
+            <span className="text-red-600">PENDENTE: {totalValido - emDia}</span>
           </div>
         </div>
 
         <div className="bg-blue-900 p-5 rounded-2xl shadow-lg text-white flex flex-col justify-between">
           <div className="flex justify-between items-start">
-            <div><p className="text-[9px] font-black uppercase tracking-widest opacity-60">Total Atletas</p><h2 className="text-3xl font-black italic">{total}</h2></div>
+            <div><p className="text-[9px] font-black uppercase tracking-widest opacity-60">Total Atletas</p><h2 className="text-3xl font-black italic">{totalValido}</h2></div>
             <div className="text-right"><p className="text-[9px] font-black uppercase tracking-widest opacity-60">Ativos</p><h2 className="text-3xl font-black italic text-green-400">{ativos}</h2></div>
           </div>
           <button onClick={() => setIsModalOpen(true)} className="mt-4 bg-white text-blue-900 text-[10px] font-black uppercase py-2 rounded shadow-md hover:bg-blue-50">+ Nova Matrícula</button>
@@ -165,7 +175,7 @@ export default function DashboardAtletas() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {atletas.map((atleta) => (
+            {listaSegura.map((atleta) => (
               <tr key={atleta.id} className="hover:bg-blue-50/40 transition-colors">
                 <td className="p-4">
                   <div className="font-extrabold text-gray-800 text-sm uppercase leading-none mb-1">{atleta.nomeCompleto || atleta.nome}</div>
