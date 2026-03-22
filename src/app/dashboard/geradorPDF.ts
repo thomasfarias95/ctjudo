@@ -43,7 +43,7 @@ export const gerarDocumentoAtleta = (atleta: any) => {
       mes,
       `${String(vencimento).padStart(2, '0')}/${String(index + 1).padStart(2, '0')}/${anoAtual}`,
       "R$ 100,00", 
-      estaPago ? "ASSINADO: ALDISIO SEVERINO" : "Assinatura: ________________"
+      estaPago ? "Assinatura: ________________" : "Assinatura: ________________"
     ];
   });
 
@@ -51,7 +51,7 @@ export const gerarDocumentoAtleta = (atleta: any) => {
     startY: 80,
     head: [['Mês de Referência', 'Data Prevista', 'Valor Sugerido', 'Recibo de Pagamento']],
     body: rows,
-    headStyles: { fillColor: 'black'}, // CORRIGIDO: Valores adicionados aqui
+    headStyles: { fillColor: 'gray'}, // CORRIGIDO: Valores adicionados aqui
     alternateRowStyles: { fillColor: 'black'}, // CORRIGIDO: Valores adicionados aqui
     didParseCell: (data) => {
       // Estiliza a assinatura automática em verde se existir
