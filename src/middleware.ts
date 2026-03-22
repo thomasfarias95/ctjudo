@@ -5,19 +5,27 @@ export function middleware(request: NextRequest) {
   const token = request.cookies.get('auth_token');
   const { pathname } = request.nextUrl;
 
-  // 1. Libera rotas essenciais
-  if (pathname === '/' || pathname.startsWith('/api') || pathname.startsWith('/_next')) {
+  // 1. IGNORA TUDO QUE NÃO SEJA PÁGINA (Imagens, API, Next Interno)
+  if (
+    pathname.startsWith('/_next') || 
+    pathname.startsWith('/api') || 
+    pathname.includes('.') ||
+    pathname === '/'
+  ) {
     return NextResponse.next();
   }
 
-  // 2. Protege o dashboard
-  if (pathname.startsWith('/dashboard') && !token) {
-    return NextResponse.redirect(new URL('/', request.url));
+  // 2. SÓ PROTEGE O DASHBOARD
+  if (pathname.startsWith('/dashboard')) {
+    if (!token) {
+      return NextResponse.redirect(new URL('/', request.url));
+    }
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
+  // Ajuste do Matcher para ser menos agressivo
+  matcher: ['/dashboard/:path*', '/((?!_next/static|_next/image|favicon.ico).*)'],
 };
