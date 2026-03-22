@@ -1,5 +1,5 @@
 "use client";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -9,7 +9,13 @@ export default function LoginPage() {
   const [senha, setSenha] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const router = useRouter();
+
+  // Garante que o componente só renderize interações de cliente após montar
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://ct-ferroviario.onrender.com';
 
@@ -29,13 +35,16 @@ export default function LoginPage() {
         const userData = await res.json();
         
         if (typeof window !== 'undefined') {
+          // 1. Cria o cookie para o middleware
           document.cookie = "auth_token=true; path=/; max-age=28800; SameSite=Lax";
+          
+          // 2. Salva sessão
           localStorage.setItem('user', JSON.stringify(userData));
           localStorage.setItem('isLoggedIn', 'true');
+
+          // 3. Redirecionamento físico para garantir que o middleware leia o cookie
+          window.location.href = '/dashboard';
         }
-        
-        // Usando window.location para garantir que o middleware leia o cookie novo
-        window.location.href = '/dashboard';
       } else if (res.status === 401) {
         setError('E-mail ou senha incorretos.');
       } else {
@@ -48,17 +57,20 @@ export default function LoginPage() {
     }
   };
 
+  // Se não estiver montado no cliente, retorna um fundo neutro para evitar erro de hidratação na Vercel
+  if (!mounted) return <div className="min-h-screen bg-gray-100" />;
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-4 text-black font-sans">
       
-      {/* BOTÃO VOLTAR - TEXTO BRANCO GARANTIDO */}
+      {/* BOTÃO VOLTAR - PADRONIZADO COM O ESTILO DO BOTÃO DE ENTRAR */}
       <div className="w-full max-w-sm mb-6 flex justify-start">
         <Link 
           href="/" 
-          className="group flex items-center bg-black px-5 py-3 rounded-2xl shadow-md border border-gray-800 text-white hover:bg-blue-900 transition-all duration-300 font-black uppercase text-xs tracking-widest"
+          className="group flex items-center bg-blue-900 px-6 py-4 rounded-2xl shadow-xl text-white hover:bg-blue-800 transition-all duration-300 font-black uppercase text-xs tracking-widest active:scale-95"
         >
-          <span className="mr-2 transform group-hover:-translate-x-1 transition-transform text-white">←</span> 
-          <span className="text-white">Voltar ao Início</span>
+          <span className="mr-2 transform group-hover:-translate-x-1 transition-transform">←</span> 
+          Voltar ao Início
         </Link>
       </div>
 
