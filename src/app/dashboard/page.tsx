@@ -11,13 +11,14 @@ export default function DashboardAtletas() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // Busca atletas com timestamp para garantir dados frescos do banco
   const fetchAtletas = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cadastro/atletas`);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cadastro/atletas?t=${new Date().getTime()}`);
       const data = await response.json();
       setAtletas(data);
     } catch (error) { 
-      console.error(error); 
+      console.error("Erro ao buscar atletas:", error); 
     } finally { 
       setLoading(false); 
     }
@@ -25,17 +26,16 @@ export default function DashboardAtletas() {
 
   useEffect(() => { fetchAtletas(); }, []);
 
-  // --- LÓGICA DE BAIXA MANUAL ATUALIZADA ---
   const handleBaixaPagamento = async (id: number) => {
     const atletaAlvo = atletas.find(a => a.id === id);
 
-    // 1. Atualiza logo na tela para o usuário ver a mudança (UI Otimista)
+    // 1. ATUALIZAÇÃO OTIMISTA: Muda na tela antes de ir ao banco
     setAtletas(prev => prev.map(a => 
       a.id === id ? { ...a, statusPagamento: 'EM_DIA' } : a
     ));
 
     try {
-      // 2. Tenta salvar no banco de dados
+      // 2. Envia para o banco de dados
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cadastro/atletas/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -43,17 +43,18 @@ export default function DashboardAtletas() {
       });
 
       if (response.ok) {
-        // 3. Se gravou no banco, gera o recibo
+        // 3. Sucesso: Gera o recibo com o novo status
         if (atletaAlvo) {
           gerarReciboIndividual({ ...atletaAlvo, statusPagamento: 'EM_DIA' });
         }
       } else {
-        alert("O recibo foi gerado, mas houve um erro ao salvar no banco. Verifique o servidor.");
+        // Se o banco falhar (ex: erro no Java), avisa o usuário
+        alert("O recibo foi gerado, mas o servidor Java não conseguiu salvar o status. Verifique o console do IntelliJ.");
         if (atletaAlvo) gerarReciboIndividual({ ...atletaAlvo, statusPagamento: 'EM_DIA' });
       }
     } catch (error) {
       console.error("Erro de conexão:", error);
-      alert("SEM CONEXÃO: O recibo foi baixado, mas o status não foi salvo no banco de dados.");
+      alert("SEM CONEXÃO: Recibo gerado offline. O status voltará a PENDENTE no F5 até que a conexão com o servidor Java seja restaurada.");
       if (atletaAlvo) {
         gerarReciboIndividual({ ...atletaAlvo, statusPagamento: 'EM_DIA' });
       }
@@ -70,6 +71,7 @@ export default function DashboardAtletas() {
 
   if (loading) return <div className="p-6 text-center text-blue-900 font-black italic animate-pulse">CARREGANDO DOJO...</div>;
 
+  // Cálculos de Estatísticas atualizados em tempo real
   const total = atletas.length || 1;
   const masc = atletas.filter(a => a.genero === 'MASCULINO' || a.sexo === 'M').length;
   const fem = atletas.filter(a => a.genero === 'FEMININO' || a.sexo === 'F').length;
@@ -81,6 +83,7 @@ export default function DashboardAtletas() {
 
   return (
     <div className="p-4 md:p-8 bg-gray-100 min-h-screen text-black font-sans text-left">
+      {/* HEADER */}
       <div className="mb-6 flex justify-between items-end border-b border-gray-200 pb-4">
         <div>
           <h1 className="text-3xl font-black text-blue-900 uppercase italic tracking-tighter leading-none">CT FERROVIÁRIO</h1>
@@ -89,17 +92,22 @@ export default function DashboardAtletas() {
         <button onClick={() => window.location.href = '/'} className="text-red-500 text-[10px] font-black uppercase hover:underline">Sair</button>
       </div>
 
+      {/* CARDS */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
           <p className="text-[9px] font-black text-gray-400 uppercase mb-3 tracking-widest">Distribuição por Gênero</p>
           <div className="space-y-3">
             <div>
               <div className="flex justify-between text-[10px] font-black mb-1 uppercase text-blue-700">♂ MASCULINO ({masc})</div>
-              <div className="w-full bg-gray-100 h-3 rounded-full overflow-hidden"><div className="bg-blue-600 h-full" style={{ width: `${percMasc}%` }}></div></div>
+              <div className="w-full bg-gray-100 h-3 rounded-full overflow-hidden">
+                <div className="bg-blue-600 h-full" style={{ width: `${percMasc}%` }}></div>
+              </div>
             </div>
             <div>
               <div className="flex justify-between text-[10px] font-black mb-1 uppercase text-pink-600">♀ FEMININO ({fem})</div>
-              <div className="w-full bg-gray-100 h-3 rounded-full overflow-hidden"><div className="bg-pink-500 h-full" style={{ width: `${percFem}%` }}></div></div>
+              <div className="w-full bg-gray-100 h-3 rounded-full overflow-hidden">
+                <div className="bg-pink-500 h-full" style={{ width: `${percFem}%` }}></div>
+              </div>
             </div>
           </div>
         </div>
@@ -124,6 +132,7 @@ export default function DashboardAtletas() {
         </div>
       </div>
 
+      {/* TABELA */}
       <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200">
         <table className="w-full text-left border-collapse">
           <thead className="bg-[#1e3a8a] text-white">
@@ -152,7 +161,10 @@ export default function DashboardAtletas() {
                     <button onClick={() => handleBaixaPagamento(atleta.id)} className="p-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 shadow-sm" title="Dar Baixa">✅</button>
                     <button onClick={() => gerarDocumentoAtleta(atleta)} className="p-2 bg-blue-600 text-white rounded hover:bg-blue-700 shadow-sm" title="Financeiro">💰</button>
                     <button onClick={() => downloadRelatorioTecnico(atleta.id, atleta.nomeCompleto)} className="p-2 bg-slate-800 text-white rounded hover:bg-black shadow-sm" title="Técnico">🥋</button>
-                    <button onClick={() => handleToggleStatus(atleta.id, atleta.ativo)} className={`px-2 py-1 rounded text-[10px] font-black text-white ${atleta.ativo !== false ? 'bg-red-500' : 'bg-green-600'}`}>
+                    <button 
+                      onClick={() => handleToggleStatus(atleta.id, atleta.ativo)} 
+                      className={`px-2 py-1 rounded text-[10px] font-black text-white ${atleta.ativo !== false ? 'bg-red-500' : 'bg-green-600'}`}
+                    >
                       {atleta.ativo !== false ? "OFF" : "ON"}
                     </button>
                   </div>
@@ -163,6 +175,7 @@ export default function DashboardAtletas() {
         </table>
       </div>
 
+      {/* MODAL */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
