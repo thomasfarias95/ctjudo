@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { downloadRelatorioTecnico, updateAtletaStatus } from '@/service/api';
 import { gerarDocumentoAtleta } from './geradorPDF';
-import { gerarReciboIndividual } from './gerarReciboIndividual'; // Importação da nova função
+import { gerarReciboIndividual } from './gerarReciboIndividual'; 
 import CadastroUsuarioForm from './CadastroUsuarioForm'; 
 
 export default function DashboardAtletas() {
@@ -21,9 +21,11 @@ export default function DashboardAtletas() {
 
   useEffect(() => { fetchAtletas(); }, []);
 
-  // --- LÓGICA DE BAIXA MANUAL COM GERAÇÃO DE RECIBO ---
   const handleBaixaPagamento = async (id: number) => {
     try {
+      // Captura os dados do atleta antes da atualização para o recibo
+      const atletaAlvo = atletas.find(a => a.id === id);
+
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cadastro/atletas/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -31,23 +33,20 @@ export default function DashboardAtletas() {
       });
 
       if (response.ok) {
-        // Encontra o atleta atual para gerar o recibo com os dados dele
-        const atletaAtualizado = atletas.find(a => a.id === id);
-
-        // Atualiza o estado local para refletir na tabela e nos gráficos
         setAtletas(prev => prev.map(a => 
           a.id === id ? { ...a, statusPagamento: 'EM_DIA' } : a
         ));
 
-        // DISPARA O RECIBO INDIVIDUAL PARA O PAI
-        if (atletaAtualizado) {
-          gerarReciboIndividual({ ...atletaAtualizado, statusPagamento: 'EM_DIA' });
+        // Baixa o recibo individual no seu PC para você enviar depois
+        if (atletaAlvo) {
+          gerarReciboIndividual({ ...atletaAlvo, statusPagamento: 'EM_DIA' });
         }
       } else {
-        alert("Erro ao registrar baixa no banco de dados.");
+        alert("Erro ao registrar baixa no banco.");
       }
     } catch (error) {
       console.error("Erro na API:", error);
+      alert("Erro de conexão.");
     }
   };
 
@@ -56,9 +55,7 @@ export default function DashboardAtletas() {
     try {
       await updateAtletaStatus(id, novoStatus);
       setAtletas(prev => prev.map(a => a.id === id ? { ...a, ativo: novoStatus } : a));
-    } catch (err) {
-      alert("Erro ao alterar status.");
-    }
+    } catch (err) { alert("Erro ao alterar status."); }
   };
 
   if (loading) return <div className="p-6 text-center text-blue-900 font-black italic animate-pulse">CARREGANDO DOJO...</div>;
@@ -68,14 +65,10 @@ export default function DashboardAtletas() {
   const fem = atletas.filter(a => a.genero === 'FEMININO' || a.sexo === 'F').length;
   const ativos = atletas.filter(a => a.ativo !== false).length;
   const emDia = atletas.filter(a => a.statusPagamento === 'EM_DIA').length;
-  const percMasc = (masc / total) * 100;
-  const percFem = (fem / total) * 100;
   const percFinanceiro = (emDia / total) * 100;
 
   return (
     <div className="p-4 md:p-8 bg-gray-100 min-h-screen text-black font-sans text-left">
-      
-      {/* HEADER */}
       <div className="mb-6 flex justify-between items-end border-b border-gray-200 pb-4">
         <div>
           <h1 className="text-3xl font-black text-blue-900 uppercase italic tracking-tighter leading-none">CT FERROVIÁRIO</h1>
@@ -84,43 +77,6 @@ export default function DashboardAtletas() {
         <button onClick={() => window.location.href = '/'} className="text-red-500 text-[10px] font-black uppercase hover:underline">Sair</button>
       </div>
 
-      {/* GRÁFICOS */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
-          <p className="text-[9px] font-black text-gray-400 uppercase mb-3 tracking-widest">Distribuição por Gênero</p>
-          <div className="space-y-3">
-            <div>
-              <div className="flex justify-between text-[10px] font-black mb-1 uppercase text-blue-700">♂ MASCULINO ({masc})</div>
-              <div className="w-full bg-gray-100 h-3 rounded-full overflow-hidden"><div className="bg-blue-600 h-full" style={{ width: `${percMasc}%` }}></div></div>
-            </div>
-            <div>
-              <div className="flex justify-between text-[10px] font-black mb-1 uppercase text-pink-600">♀ FEMININO ({fem})</div>
-              <div className="w-full bg-gray-100 h-3 rounded-full overflow-hidden"><div className="bg-pink-500 h-full" style={{ width: `${percFem}%` }}></div></div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
-          <p className="text-[9px] font-black text-gray-400 uppercase mb-3 tracking-widest">Saúde Financeira ({percFinanceiro.toFixed(0)}%)</p>
-          <div className="w-full bg-red-100 h-8 rounded-lg overflow-hidden flex mb-2">
-            <div className="bg-emerald-500 h-full transition-all" style={{ width: `${percFinanceiro}%` }}></div>
-          </div>
-          <div className="flex justify-between text-[9px] font-black uppercase tracking-tighter">
-            <span className="text-emerald-700">EM DIA: {emDia}</span>
-            <span className="text-red-600">PENDENTE: {total - emDia}</span>
-          </div>
-        </div>
-
-        <div className="bg-blue-900 p-5 rounded-2xl shadow-lg text-white flex flex-col justify-between">
-          <div className="flex justify-between items-start">
-            <div><p className="text-[9px] font-black uppercase tracking-widest opacity-60">Total de Atletas</p><h2 className="text-3xl font-black italic">{total}</h2></div>
-            <div className="text-right"><p className="text-[9px] font-black uppercase tracking-widest opacity-60">Ativos</p><h2 className="text-3xl font-black italic text-green-400">{ativos}</h2></div>
-          </div>
-          <button onClick={() => setIsModalOpen(true)} className="mt-4 bg-white text-blue-900 text-[10px] font-black uppercase py-2 rounded shadow-md hover:bg-blue-50">+ Nova Matrícula</button>
-        </div>
-      </div>
-
-      {/* TABELA */}
       <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200">
         <table className="w-full text-left border-collapse">
           <thead className="bg-[#1e3a8a] text-white">
@@ -162,20 +118,6 @@ export default function DashboardAtletas() {
           </tbody>
         </table>
       </div>
-
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="bg-blue-900 p-4 text-white flex justify-between items-center sticky top-0 z-10">
-              <h3 className="font-black uppercase tracking-widest text-xs italic">Painel de Matrícula CT</h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-white font-bold text-xl px-2">✕</button>
-            </div>
-            <div className="p-6">
-              <CadastroUsuarioForm onClose={() => setIsModalOpen(false)} onSuccess={() => { setIsModalOpen(false); fetchAtletas(); }} />
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

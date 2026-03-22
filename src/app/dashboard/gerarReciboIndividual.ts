@@ -1,23 +1,21 @@
 import jsPDF from 'jspdf';
 
 export const gerarReciboIndividual = (atleta: any) => {
-  // O erro acontecia aqui: faltava o valor
   const doc = new jsPDF({
     orientation: 'p',
     unit: 'mm',
-    format:'A6' // Tamanho A6 (perfeito para WhatsApp)
+    format:'A6' // Formato A6 para facilitar o envio via celular
   });
 
   const dataHoje = new Date();
   const dataFormatada = dataHoje.toLocaleDateString('pt-BR');
   
-  // Tratamento para não exibir "null" (conforme sua imagem do banco)
+  // Tratamento para exibir "PRÓPRIO" caso o responsável esteja nulo no banco
   const nomeAtleta = (atleta.nomeCompleto || atleta.nome || "Atleta").toUpperCase();
   const responsavel = (atleta.nomeResponsavel || "PRÓPRIO").toUpperCase();
 
   // --- DESIGN DO RECIBO ---
-  // Faixa Azul Topo
-  doc.setFillColor(0, 51, 102);
+  doc.setFillColor(0, 51, 102); // Azul Marinho do CT
   doc.rect(0, 0, 105, 25, 'F');
   
   doc.setTextColor(255, 255, 255);
@@ -27,7 +25,6 @@ export const gerarReciboIndividual = (atleta: any) => {
   doc.setFontSize(8);
   doc.text("CT FERROVIÁRIO DE JUDÔ", 52.5, 18, { align: 'center' });
 
-  // Informações Principais
   doc.setTextColor(0, 0, 0);
   doc.setFontSize(10);
   doc.text(`DATA: ${dataFormatada}`, 10, 40);
@@ -46,7 +43,7 @@ export const gerarReciboIndividual = (atleta: any) => {
   doc.text("VALOR:", 10, 66);
   doc.text("R$ 100,00", 30, 66);
 
-  // --- TEXTO DE AGRADECIMENTO ---
+  // --- MENSAGEM DE AGRADECIMENTO ---
   doc.setDrawColor(200, 200, 200);
   doc.line(10, 75, 95, 75);
 
@@ -56,18 +53,18 @@ export const gerarReciboIndividual = (atleta: any) => {
   const linhasMensagem = doc.splitTextToSize(mensagem, 85);
   doc.text(linhasMensagem, 10, 85);
 
-  // --- CARIMBO DE ASSINATURA ---
+  // --- CARIMBO DE CONFIRMAÇÃO ---
   doc.setDrawColor(0, 51, 102);
   doc.setLineWidth(0.5);
-  doc.roundedRect(25, 110, 55, 20, 3, 3, 'S'); // Moldura do carimbo
+  doc.roundedRect(25, 110, 55, 18, 3, 3, 'S');
   
   doc.setFont("helvetica", "bold");
   doc.setTextColor(0, 51, 102);
   doc.setFontSize(8);
-  doc.text("PAGAMENTO CONFIRMADO", 52.5, 118, { align: 'center' });
-  doc.text("SENSEI ALDISIO SEVERINO", 52.5, 124, { align: 'center' });
+  doc.text("PAGAMENTO CONFIRMADO", 52.5, 117, { align: 'center' });
+  doc.text("SENSEI ALDISIO SEVERINO", 52.5, 123, { align: 'center' });
 
-  // Nome do arquivo para salvar
+  // Salva o arquivo no seu computador para envio manual
   const nomeArquivo = `Recibo_${nomeAtleta.split(' ')}_${dataFormatada.replace(/\//g, '-')}.pdf`;
   doc.save(nomeArquivo);
 };
