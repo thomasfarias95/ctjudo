@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { downloadRelatorioTecnico, updateAtletaStatus } from '@/service/api';
 import { gerarDocumentoAtleta } from './geradorPDF';
+import { gerarReciboIndividual } from './gerarReciboIndividual'; // Importação da nova função
 import CadastroUsuarioForm from './CadastroUsuarioForm'; 
 
 export default function DashboardAtletas() {
@@ -20,17 +21,38 @@ export default function DashboardAtletas() {
 
   useEffect(() => { fetchAtletas(); }, []);
 
-  // --- LÓGICA DE BAIXA MANUAL (AGORA FUNCIONA) ---
-  const handleBaixaPagamento = (id: number) => {
-    setAtletas(prev => prev.map(a => 
-      a.id === id ? { ...a, statusPagamento: 'EM_DIA' } : a
-    ));
-    // Aqui você pode adicionar a chamada de API se tiver o endpoint de financeiro
+  // --- LÓGICA DE BAIXA MANUAL COM GERAÇÃO DE RECIBO ---
+  const handleBaixaPagamento = async (id: number) => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cadastro/atletas/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ statusPagamento: 'EM_DIA' })
+      });
+
+      if (response.ok) {
+        // Encontra o atleta atual para gerar o recibo com os dados dele
+        const atletaAtualizado = atletas.find(a => a.id === id);
+
+        // Atualiza o estado local para refletir na tabela e nos gráficos
+        setAtletas(prev => prev.map(a => 
+          a.id === id ? { ...a, statusPagamento: 'EM_DIA' } : a
+        ));
+
+        // DISPARA O RECIBO INDIVIDUAL PARA O PAI
+        if (atletaAtualizado) {
+          gerarReciboIndividual({ ...atletaAtualizado, statusPagamento: 'EM_DIA' });
+        }
+      } else {
+        alert("Erro ao registrar baixa no banco de dados.");
+      }
+    } catch (error) {
+      console.error("Erro na API:", error);
+    }
   };
 
-  // --- LÓGICA ON/OFF (REINTEGRADA) ---
   const handleToggleStatus = async (id: number, statusAtual: any) => {
-    const novoStatus = statusAtual === false; // Inverte o booleano
+    const novoStatus = statusAtual === false;
     try {
       await updateAtletaStatus(id, novoStatus);
       setAtletas(prev => prev.map(a => a.id === id ? { ...a, ativo: novoStatus } : a));
@@ -41,7 +63,6 @@ export default function DashboardAtletas() {
 
   if (loading) return <div className="p-6 text-center text-blue-900 font-black italic animate-pulse">CARREGANDO DOJO...</div>;
 
-  // CÁLCULOS PARA OS GRÁFICOS
   const total = atletas.length || 1;
   const masc = atletas.filter(a => a.genero === 'MASCULINO' || a.sexo === 'M').length;
   const fem = atletas.filter(a => a.genero === 'FEMININO' || a.sexo === 'F').length;
@@ -58,15 +79,13 @@ export default function DashboardAtletas() {
       <div className="mb-6 flex justify-between items-end border-b border-gray-200 pb-4">
         <div>
           <h1 className="text-3xl font-black text-blue-900 uppercase italic tracking-tighter leading-none">CT FERROVIÁRIO</h1>
-          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Gestão de Judô </p>
+          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Gestão de Judô • Sensei Aldisio</p>
         </div>
         <button onClick={() => window.location.href = '/'} className="text-red-500 text-[10px] font-black uppercase hover:underline">Sair</button>
       </div>
 
-      {/* GRÁFICOS E INDICADORES */}
+      {/* GRÁFICOS */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        
-        {/* GRÁFICO GÊNERO */}
         <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
           <p className="text-[9px] font-black text-gray-400 uppercase mb-3 tracking-widest">Distribuição por Gênero</p>
           <div className="space-y-3">
@@ -81,7 +100,6 @@ export default function DashboardAtletas() {
           </div>
         </div>
 
-        {/* FINANCEIRO EM LINHA */}
         <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
           <p className="text-[9px] font-black text-gray-400 uppercase mb-3 tracking-widest">Saúde Financeira ({percFinanceiro.toFixed(0)}%)</p>
           <div className="w-full bg-red-100 h-8 rounded-lg overflow-hidden flex mb-2">
@@ -93,23 +111,16 @@ export default function DashboardAtletas() {
           </div>
         </div>
 
-        {/* STATUS GERAL E AÇÃO */}
         <div className="bg-blue-900 p-5 rounded-2xl shadow-lg text-white flex flex-col justify-between">
           <div className="flex justify-between items-start">
-            <div>
-              <p className="text-[9px] font-black uppercase tracking-widest opacity-60">Total de Atletas</p>
-              <h2 className="text-3xl font-black italic">{total}</h2>
-            </div>
-            <div className="text-right">
-              <p className="text-[9px] font-black uppercase tracking-widest opacity-60">Ativos</p>
-              <h2 className="text-3xl font-black italic text-green-400">{ativos}</h2>
-            </div>
+            <div><p className="text-[9px] font-black uppercase tracking-widest opacity-60">Total de Atletas</p><h2 className="text-3xl font-black italic">{total}</h2></div>
+            <div className="text-right"><p className="text-[9px] font-black uppercase tracking-widest opacity-60">Ativos</p><h2 className="text-3xl font-black italic text-green-400">{ativos}</h2></div>
           </div>
           <button onClick={() => setIsModalOpen(true)} className="mt-4 bg-white text-blue-900 text-[10px] font-black uppercase py-2 rounded shadow-md hover:bg-blue-50">+ Nova Matrícula</button>
         </div>
       </div>
 
-      {/* TABELA COMPLETA */}
+      {/* TABELA */}
       <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200">
         <table className="w-full text-left border-collapse">
           <thead className="bg-[#1e3a8a] text-white">
@@ -152,7 +163,6 @@ export default function DashboardAtletas() {
         </table>
       </div>
 
-      {/* MODAL MANTIDO IGUAL */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
