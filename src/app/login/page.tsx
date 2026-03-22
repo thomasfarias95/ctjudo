@@ -27,7 +27,14 @@ export default function LoginPage() {
 
       if (res.ok) {
         const userData = await res.json();
+        
+        // --- BLINDAGEM: CRIANDO O COOKIE PARA O MIDDLEWARE ---
+        // Isso cria a "chave" que o middleware.ts procura
+        document.cookie = "auth_token=true; path=/; max-age=28800"; // Dura 8 horas
+        
         localStorage.setItem('user', JSON.stringify(userData));
+        localStorage.setItem('isLoggedIn', 'true'); // Backup para verificação em componentes
+        
         router.push('/dashboard');
       } else if (res.status === 401) {
         setError('E-mail ou senha incorretos.');
@@ -42,9 +49,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-4 text-black">
       
-      {/* BOTÃO VOLTAR - AJUSTADO PARA MELHOR LEITURA */}
       <div className="w-full max-w-sm mb-6 flex justify-start">
         <Link 
           href="/" 
@@ -94,7 +100,7 @@ export default function LoginPage() {
             <label className="block text-[10px] font-black text-gray-400 uppercase mb-2 ml-1 tracking-widest text-left">Senha</label>
             <input 
               type="password" 
-              placeholder="Ex: aldisio2026" // AJUDANDO O PROFESSOR A LEMBRAR O PADRÃO
+              placeholder="Ex: aldisio2026" 
               className="w-full p-4 border-2 border-gray-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-100 text-black transition font-bold"
               value={senha}
               onChange={(e) => setSenha(e.target.value)}

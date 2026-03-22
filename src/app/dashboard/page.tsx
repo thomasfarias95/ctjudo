@@ -11,7 +11,19 @@ export default function DashboardAtletas() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Busca atletas com timestamp para garantir dados frescos do banco
+  // --- FUNÇÃO DE LOGOUT (BLINDAGEM) ---
+  const handleLogout = () => {
+    // 1. Mata o Cookie (fazendo ele expirar agora) para o Middleware barrar o acesso
+    document.cookie = "auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+    
+    // 2. Limpa os dados locais de sessão
+    localStorage.removeItem('user');
+    localStorage.removeItem('isLoggedIn');
+    
+    // 3. Manda para a tela de login (Raiz)
+    window.location.href = '/';
+  };
+
   const fetchAtletas = async () => {
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cadastro/atletas?t=${new Date().getTime()}`);
@@ -24,18 +36,24 @@ export default function DashboardAtletas() {
     }
   };
 
-  useEffect(() => { fetchAtletas(); }, []);
+  useEffect(() => { 
+    // Segurança adicional: Se não houver registro de login no navegador, expulsa
+    const loggedIn = localStorage.getItem('isLoggedIn');
+    if (!loggedIn) {
+      window.location.href = '/';
+      return;
+    }
+    fetchAtletas(); 
+  }, []);
 
   const handleBaixaPagamento = async (id: number) => {
     const atletaAlvo = atletas.find(a => a.id === id);
 
-    // 1. ATUALIZAÇÃO OTIMISTA: Muda na tela antes de ir ao banco
     setAtletas(prev => prev.map(a => 
       a.id === id ? { ...a, statusPagamento: 'EM_DIA' } : a
     ));
 
     try {
-      // 2. Envia para o banco de dados
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cadastro/atletas/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -43,12 +61,10 @@ export default function DashboardAtletas() {
       });
 
       if (response.ok) {
-        // 3. Sucesso: Gera o recibo com o novo status
         if (atletaAlvo) {
           gerarReciboIndividual({ ...atletaAlvo, statusPagamento: 'EM_DIA' });
         }
       } else {
-        // Se o banco falhar (ex: erro no Java), avisa o usuário
         alert("O recibo foi gerado, mas o servidor Java não conseguiu salvar o status. Verifique o console do IntelliJ.");
         if (atletaAlvo) gerarReciboIndividual({ ...atletaAlvo, statusPagamento: 'EM_DIA' });
       }
@@ -71,7 +87,6 @@ export default function DashboardAtletas() {
 
   if (loading) return <div className="p-6 text-center text-blue-900 font-black italic animate-pulse">CARREGANDO DOJO...</div>;
 
-  // Cálculos de Estatísticas atualizados em tempo real
   const total = atletas.length || 1;
   const masc = atletas.filter(a => a.genero === 'MASCULINO' || a.sexo === 'M').length;
   const fem = atletas.filter(a => a.genero === 'FEMININO' || a.sexo === 'F').length;
@@ -89,10 +104,16 @@ export default function DashboardAtletas() {
           <h1 className="text-3xl font-black text-blue-900 uppercase italic tracking-tighter leading-none">CT FERROVIÁRIO</h1>
           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Gestão de Judô</p>
         </div>
-        <button onClick={() => window.location.href = '/'} className="text-red-500 text-[10px] font-black uppercase hover:underline">Sair</button>
+        {/* BOTÃO SAIR ATUALIZADO */}
+        <button 
+          onClick={handleLogout} 
+          className="bg-red-50 text-red-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-red-600 hover:text-white transition-all border border-red-100"
+        >
+          Sair do Sistema
+        </button>
       </div>
 
-      {/* CARDS */}
+      {/* CARDS DE ESTATÍSTICAS */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
           <p className="text-[9px] font-black text-gray-400 uppercase mb-3 tracking-widest">Distribuição por Gênero</p>
@@ -132,7 +153,7 @@ export default function DashboardAtletas() {
         </div>
       </div>
 
-      {/* TABELA */}
+      {/* TABELA DE GESTÃO */}
       <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200">
         <table className="w-full text-left border-collapse">
           <thead className="bg-[#1e3a8a] text-white">
@@ -175,7 +196,7 @@ export default function DashboardAtletas() {
         </table>
       </div>
 
-      {/* MODAL */}
+      {/* MODAL DE CADASTRO */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
