@@ -4,7 +4,7 @@ export const gerarReciboIndividual = (atleta: any) => {
   const doc = new jsPDF({
     orientation: 'p',
     unit: 'mm',
-    format:'A6' // Formato A6 para facilitar o envio via celular
+    format:'A6'
   });
 
   const dataHoje = new Date();
