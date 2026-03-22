@@ -11,6 +11,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
+  // URL do seu Back-end no Render
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://ct-ferroviario.onrender.com';
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -28,13 +29,18 @@ export default function LoginPage() {
       if (res.ok) {
         const userData = await res.json();
         
-        // --- BLINDAGEM: CRIANDO O COOKIE PARA O MIDDLEWARE ---
-        // Isso cria a "chave" que o middleware.ts procura
-        document.cookie = "auth_token=true; path=/; max-age=28800"; // Dura 8 horas
+        // --- BLINDAGEM E PROTEÇÃO VERCEL ---
+        // Só executamos comandos de navegador (cookie/localStorage) se estivermos no Cliente
+        if (typeof window !== 'undefined') {
+          // 1. Cria a "chave" que o middleware.ts procura para liberar o Dashboard
+          document.cookie = "auth_token=true; path=/; max-age=28800; SameSite=Lax";
+          
+          // 2. Salva os dados do professor e o status de logado
+          localStorage.setItem('user', JSON.stringify(userData));
+          localStorage.setItem('isLoggedIn', 'true');
+        }
         
-        localStorage.setItem('user', JSON.stringify(userData));
-        localStorage.setItem('isLoggedIn', 'true'); // Backup para verificação em componentes
-        
+        // Redireciona para o Dashboard protegido
         router.push('/dashboard');
       } else if (res.status === 401) {
         setError('E-mail ou senha incorretos.');
@@ -49,14 +55,15 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-4 text-black">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-4 text-black font-sans">
       
+      {/* BOTÃO VOLTAR */}
       <div className="w-full max-w-sm mb-6 flex justify-start">
         <Link 
           href="/" 
-          className="group flex items-center bg-black px-5 py-3 rounded-2xl shadow-md border border-gray-200 text-blue-900 hover:bg-blue-900 hover:text-white transition-all duration-300 font-black uppercase text-xs tracking-widest"
+          className="group flex items-center bg-black px-5 py-3 rounded-2xl shadow-md border border-gray-200 text-white hover:bg-blue-900 transition-all duration-300 font-black uppercase text-xs tracking-widest"
         >
-          <span className="mr-2 transform group-hover:-translate-x-1 transition-transform">←</span> 
+          <span className="mr-2 transform group-hover:-translate-x-1 transition-transform text-white">←</span> 
           Voltar ao Início
         </Link>
       </div>
@@ -100,7 +107,7 @@ export default function LoginPage() {
             <label className="block text-[10px] font-black text-gray-400 uppercase mb-2 ml-1 tracking-widest text-left">Senha</label>
             <input 
               type="password" 
-              placeholder="Ex: aldisio2026" 
+              placeholder="Sua senha de acesso" 
               className="w-full p-4 border-2 border-gray-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-100 text-black transition font-bold"
               value={senha}
               onChange={(e) => setSenha(e.target.value)}

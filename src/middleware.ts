@@ -5,17 +5,12 @@ export function middleware(request: NextRequest) {
   const token = request.cookies.get('auth_token');
   const { pathname } = request.nextUrl;
 
-  // 1. LIBERAÇÃO TOTAL: Não intercepta o Login, arquivos do Next e a API do Java
-  if (
-    pathname === '/' || 
-    pathname.startsWith('/_next') || 
-    pathname.startsWith('/api') || 
-    pathname.includes('.') // Permite imagens e ícones
-  ) {
+  // 1. Libera rotas essenciais
+  if (pathname === '/' || pathname.startsWith('/api') || pathname.startsWith('/_next')) {
     return NextResponse.next();
   }
 
-  // 2. BLOQUEIO: Só barra se tentar entrar no /dashboard sem o cookie
+  // 2. Protege o dashboard
   if (pathname.startsWith('/dashboard') && !token) {
     return NextResponse.redirect(new URL('/', request.url));
   }
@@ -24,6 +19,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Monitora rotas de página, mas ignora arquivos estáticos e chamadas de API internas
   matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
 };
