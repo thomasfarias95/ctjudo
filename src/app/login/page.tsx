@@ -53,14 +53,14 @@ export default function LoginPage() {
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-4 text-black font-sans">
       
       <div className="w-full max-w-sm mb-6 flex justify-start">
-        <Link 
-          href="/" 
-          className="group flex items-center bg-blue-900 px-6 py-4 rounded-2xl shadow-xl text-white hover:bg-blue-800 transition-all duration-300 font-black uppercase text-xs tracking-widest active:scale-95"
-        >
-          <span className="mr-2">←</span> 
-          Voltar ao Início
-        </Link>
-      </div>
+  <Link 
+    href="/" 
+    className="group flex items-center bg-blue-900 px-6 py-3 rounded-xl shadow-xl text-white hover:bg-blue-800 transition-all duration-300 font-black uppercase text-[10px] tracking-widest active:scale-95 border border-blue-800"
+  >
+    <span className="mr-2 group-hover:-translate-x-1 transition-transform">←</span> 
+    Voltar ao Início
+  </Link>
+</div>
 
       <form onSubmit={handleLogin} className="bg-white p-10 rounded-[2.5rem] shadow-2xl w-full max-w-sm border border-gray-200">
         <div className="flex justify-center mb-8">
