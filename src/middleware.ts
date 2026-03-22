@@ -5,27 +5,26 @@ export function middleware(request: NextRequest) {
   const token = request.cookies.get('auth_token');
   const { pathname } = request.nextUrl;
 
-  // 1. IGNORA TUDO QUE NÃO SEJA PÁGINA (Imagens, API, Next Interno)
+  // 1. Liberação total para rotas públicas e recursos
   if (
-    pathname.startsWith('/_next') || 
+    pathname === '/' || 
+    pathname === '/login' || // Se sua rota for /login, ajuste aqui
     pathname.startsWith('/api') || 
-    pathname.includes('.') ||
-    pathname === '/'
+    pathname.startsWith('/_next') || 
+    pathname.includes('favicon.ico')
   ) {
     return NextResponse.next();
   }
 
-  // 2. SÓ PROTEGE O DASHBOARD
-  if (pathname.startsWith('/dashboard')) {
-    if (!token) {
-      return NextResponse.redirect(new URL('/', request.url));
-    }
+  // 2. Proteção do Dashboard
+  if (pathname.startsWith('/dashboard') && !token) {
+    return NextResponse.redirect(new URL('/', request.url));
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  // Ajuste do Matcher para ser menos agressivo
-  matcher: ['/dashboard/:path*', '/((?!_next/static|_next/image|favicon.ico).*)'],
+  // O matcher deve excluir explicitamente arquivos estáticos
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 };

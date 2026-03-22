@@ -9,13 +9,7 @@ export default function LoginPage() {
   const [senha, setSenha] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [mounted, setMounted] = useState(false);
   const router = useRouter();
-
-  // Garante que o componente só renderize interações de cliente após montar
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://ct-ferroviario.onrender.com';
 
@@ -34,56 +28,43 @@ export default function LoginPage() {
       if (res.ok) {
         const userData = await res.json();
         
+        // Grava os dados apenas se estiver no navegador
         if (typeof window !== 'undefined') {
-          // 1. Cria o cookie para o middleware
+          // Grava o cookie e espera um pouco antes de mudar de página
           document.cookie = "auth_token=true; path=/; max-age=28800; SameSite=Lax";
-          
-          // 2. Salva sessão
           localStorage.setItem('user', JSON.stringify(userData));
           localStorage.setItem('isLoggedIn', 'true');
-
-          // 3. Redirecionamento físico para garantir que o middleware leia o cookie
-          window.location.href = '/dashboard';
+          
+          // Redireciona via Next.js Router
+          router.push('/dashboard');
         }
-      } else if (res.status === 401) {
-        setError('E-mail ou senha incorretos.');
       } else {
-        setError('Erro no servidor. Tente novamente mais tarde.');
+        const data = await res.json().catch(() => ({}));
+        setError(data.message || 'Credenciais inválidas.');
       }
     } catch (err) {
-      setError('Não foi possível conectar ao servidor.');
+      setError('Erro ao conectar com o servidor.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Se não estiver montado no cliente, retorna um fundo neutro para evitar erro de hidratação na Vercel
-  if (!mounted) return <div className="min-h-screen bg-gray-100" />;
-
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-4 text-black font-sans">
       
-      {/* BOTÃO VOLTAR - PADRONIZADO COM O ESTILO DO BOTÃO DE ENTRAR */}
       <div className="w-full max-w-sm mb-6 flex justify-start">
         <Link 
           href="/" 
           className="group flex items-center bg-blue-900 px-6 py-4 rounded-2xl shadow-xl text-white hover:bg-blue-800 transition-all duration-300 font-black uppercase text-xs tracking-widest active:scale-95"
         >
-          <span className="mr-2 transform group-hover:-translate-x-1 transition-transform">←</span> 
+          <span className="mr-2">←</span> 
           Voltar ao Início
         </Link>
       </div>
 
       <form onSubmit={handleLogin} className="bg-white p-10 rounded-[2.5rem] shadow-2xl w-full max-w-sm border border-gray-200">
-        
         <div className="flex justify-center mb-8">
-          <Image 
-            src="/logo.png" 
-            alt="Logo CT Ferroviário"
-            width={120}
-            height={120}
-            className="rounded-full shadow-lg border-4 border-gray-50"
-          />
+          <Image src="/logo.png" alt="Logo" width={120} height={120} className="rounded-full shadow-lg border-4 border-gray-50" priority />
         </div>
 
         <h2 className="text-3xl font-black text-center mb-8 text-blue-900 uppercase tracking-tighter leading-none">
@@ -97,44 +78,26 @@ export default function LoginPage() {
         )}
         
         <div className="space-y-5">
-          <div>
-            <label className="block text-[10px] font-black text-gray-400 uppercase mb-2 ml-1 tracking-widest text-left">E-mail</label>
-            <input 
-              type="email" 
-              placeholder="seu@email.com" 
-              className="w-full p-4 border-2 border-gray-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-100 text-black transition font-bold"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-[10px] font-black text-gray-400 uppercase mb-2 ml-1 tracking-widest text-left">Senha</label>
-            <input 
-              type="password" 
-              placeholder="Sua senha de acesso" 
-              className="w-full p-4 border-2 border-gray-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-100 text-black transition font-bold"
-              value={senha}
-              onChange={(e) => setSenha(e.target.value)}
-              required
-            />
-          </div>
+          <input 
+            type="email" placeholder="E-mail" 
+            className="w-full p-4 border-2 border-gray-100 rounded-2xl text-black font-bold focus:outline-none focus:ring-4 focus:ring-blue-100"
+            value={email} onChange={(e) => setEmail(e.target.value)} required
+          />
+          <input 
+            type="password" placeholder="Senha" 
+            className="w-full p-4 border-2 border-gray-100 rounded-2xl text-black font-bold focus:outline-none focus:ring-4 focus:ring-blue-100"
+            value={senha} onChange={(e) => setSenha(e.target.value)} required
+          />
         </div>
         
         <button 
-          type="submit" 
-          disabled={loading}
+          type="submit" disabled={loading}
           className={`w-full py-5 mt-10 rounded-2xl font-black shadow-xl transition-all uppercase tracking-widest text-sm ${
-            loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-900 hover:bg-blue-800 text-white active:scale-95 hover:shadow-blue-200'
+            loading ? 'bg-gray-400' : 'bg-blue-900 text-white hover:bg-blue-800'
           }`}
         >
           {loading ? 'Validando...' : 'Entrar no Painel'}
         </button>
-
-        <p className="text-center text-[10px] font-black text-gray-300 mt-8 uppercase tracking-[0.2em]">
-          © 2026 CT Ferroviário
-        </p>
       </form>
     </div>
   );
