@@ -125,7 +125,7 @@ export default function DashboardAtletas() {
       <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-end border-b border-gray-200 pb-6 gap-4">
         <div>
           <h1 className="text-4xl font-black text-blue-900 uppercase italic tracking-tighter leading-none">CT FERROVIÁRIO</h1>
-          <p className="text-[11px] font-bold text-gray-500 uppercase tracking-[0.3em] mt-2">Sistema de Gestão de Atletas • Sensei Aldisio</p>
+          <p className="text-[11px] font-bold text-gray-500 uppercase tracking-[0.3em] mt-2"> • Sistema de Gestão de Atletas • </p>
         </div>
         <button 
           onClick={handleLogout} 
