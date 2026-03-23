@@ -11,7 +11,9 @@ export default function DashboardAtletas() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // --- FUNÇÃO DE LOGOUT (BLINDAGEM) ---
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://ct-ferroviario.onrender.com';
+
+  // --- LOGOUT ---
   const handleLogout = () => {
     document.cookie = "auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
     localStorage.removeItem('user');
@@ -19,27 +21,23 @@ export default function DashboardAtletas() {
     window.location.href = '/';
   };
 
+  // --- BUSCA DE DADOS ---
   const fetchAtletas = async () => {
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-      const response = await fetch(`${apiUrl}/api/cadastro/atletas?t=${new Date().getTime()}`);
+      const response = await fetch(`${API_URL}/api/cadastro/atletas?t=${new Date().getTime()}`);
       
-      if (!response.ok) {
-        throw new Error(`Erro na API: ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`Erro na API: ${response.status}`);
 
       const data = await response.json();
       
-      // BLINDAGEM: Garante que 'atletas' sempre seja um Array
       if (Array.isArray(data)) {
         setAtletas(data);
       } else {
-        console.error("Dados recebidos não são um array:", data);
         setAtletas([]);
       }
     } catch (error) { 
       console.error("Erro ao buscar atletas:", error); 
-      setAtletas([]); // Se falhar, mantém como array vazio para não quebrar o filter
+      setAtletas([]); 
     } finally { 
       setLoading(false); 
     }
@@ -54,46 +52,59 @@ export default function DashboardAtletas() {
     fetchAtletas(); 
   }, []);
 
+  // --- BAIXA DE PAGAMENTO (SINCRONIZADA COM JAVA) ---
   const handleBaixaPagamento = async (id: number) => {
     const atletaAlvo = atletas.find(a => a.id === id);
+    if (!atletaAlvo) return;
 
+    // Backup para reverter se der erro no servidor
+    const backupAtletas = [...atletas];
+
+    // Atualização Otimista (Melhora a UX)
     setAtletas(prev => prev.map(a => 
       a.id === id ? { ...a, statusPagamento: 'EM_DIA' } : a
     ));
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cadastro/atletas/${id}`, {
+      const response = await fetch(`${API_URL}/api/cadastro/atletas/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ statusPagamento: 'EM_DIA' })
       });
 
       if (response.ok) {
-        if (atletaAlvo) {
-          gerarReciboIndividual({ ...atletaAlvo, statusPagamento: 'EM_DIA' });
-        }
+        // Se gravou no Java, gera o recibo
+        gerarReciboIndividual({ ...atletaAlvo, statusPagamento: 'EM_DIA' });
       } else {
-        alert("O recibo foi gerado, mas o servidor Java não conseguiu salvar o status.");
-        if (atletaAlvo) gerarReciboIndividual({ ...atletaAlvo, statusPagamento: 'EM_DIA' });
+        // Se o Java deu erro (ex: Erro 500), volta o status para Pendente
+        setAtletas(backupAtletas);
+        alert("Erro no servidor: O pagamento não pôde ser processado no banco.");
       }
     } catch (error) {
       console.error("Erro de conexão:", error);
-      alert("SEM CONEXÃO: Recibo gerado offline.");
-      if (atletaAlvo) gerarReciboIndividual({ ...atletaAlvo, statusPagamento: 'EM_DIA' });
+      setAtletas(backupAtletas);
+      alert("Falha na conexão com o servidor do CT.");
     }
   };
 
+  // --- ATIVAR/DESATIVAR ATLETA ---
   const handleToggleStatus = async (id: number, statusAtual: any) => {
     const novoStatus = statusAtual === false;
     try {
       await updateAtletaStatus(id, novoStatus);
       setAtletas(prev => prev.map(a => a.id === id ? { ...a, ativo: novoStatus } : a));
-    } catch (err) { alert("Erro ao alterar status."); }
+    } catch (err) { 
+      alert("Erro ao alterar status de atividade."); 
+    }
   };
 
-  if (loading) return <div className="p-6 text-center text-blue-900 font-black italic animate-pulse">CARREGANDO DOJO...</div>;
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 text-blue-900 font-black italic animate-pulse uppercase tracking-widest">
+      Carregando CT Ferroviário...
+    </div>
+  );
 
-  // --- CÁLCULOS PROTEGIDOS (PREVENT "filter is not a function") ---
+  // --- CÁLCULOS DE GESTÃO ---
   const listaSegura = Array.isArray(atletas) ? atletas : [];
   const totalValido = listaSegura.length;
   const divisor = totalValido > 0 ? totalValido : 1;
@@ -108,114 +119,176 @@ export default function DashboardAtletas() {
   const percFinanceiro = (emDia / divisor) * 100;
 
   return (
-    <div className="p-4 md:p-8 bg-gray-100 min-h-screen text-black font-sans text-left">
-      {/* HEADER */}
-      <div className="mb-6 flex justify-between items-end border-b border-gray-200 pb-4">
+    <div className="p-4 md:p-8 bg-gray-50 min-h-screen text-black font-sans">
+      
+      {/* HEADER PROFISSIONAL */}
+      <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-end border-b border-gray-200 pb-6 gap-4">
         <div>
-          <h1 className="text-3xl font-black text-blue-900 uppercase italic tracking-tighter leading-none">CT FERROVIÁRIO</h1>
-          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Gestão de Judô</p>
+          <h1 className="text-4xl font-black text-blue-900 uppercase italic tracking-tighter leading-none">CT FERROVIÁRIO</h1>
+          <p className="text-[11px] font-bold text-gray-500 uppercase tracking-[0.3em] mt-2">Sistema de Gestão de Atletas • Sensei Aldisio</p>
         </div>
         <button 
           onClick={handleLogout} 
-          className="bg-red-50 text-red-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-red-600 hover:text-white transition-all border border-red-100"
+          className="bg-white text-red-600 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase hover:bg-red-600 hover:text-white transition-all duration-300 border border-red-100 shadow-sm active:scale-95"
         >
           Sair do Sistema
         </button>
       </div>
 
-      {/* CARDS DE ESTATÍSTICAS */}
+      {/* DASHBOARD CARDS */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
-          <p className="text-[9px] font-black text-gray-400 uppercase mb-3 tracking-widest">Distribuição por Gênero</p>
-          <div className="space-y-3">
+        
+        {/* CARD GÊNERO */}
+        <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100">
+          <p className="text-[10px] font-black text-gray-400 uppercase mb-4 tracking-widest">Censo da Academia</p>
+          <div className="space-y-4">
             <div>
-              <div className="flex justify-between text-[10px] font-black mb-1 uppercase text-blue-700">♂ MASCULINO ({masc})</div>
-              <div className="w-full bg-gray-100 h-3 rounded-full overflow-hidden">
-                <div className="bg-blue-600 h-full" style={{ width: `${percMasc}%` }}></div>
+              <div className="flex justify-between text-[11px] font-black mb-1.5 uppercase text-blue-700">♂ Masculino ({masc})</div>
+              <div className="w-full bg-gray-100 h-3.5 rounded-full overflow-hidden">
+                <div className="bg-blue-600 h-full transition-all duration-700" style={{ width: `${percMasc}%` }}></div>
               </div>
             </div>
             <div>
-              <div className="flex justify-between text-[10px] font-black mb-1 uppercase text-pink-600">♀ FEMININO ({fem})</div>
-              <div className="w-full bg-gray-100 h-3 rounded-full overflow-hidden">
-                <div className="bg-pink-500 h-full" style={{ width: `${percFem}%` }}></div>
+              <div className="flex justify-between text-[11px] font-black mb-1.5 uppercase text-pink-600">♀ Feminino ({fem})</div>
+              <div className="w-full bg-gray-100 h-3.5 rounded-full overflow-hidden">
+                <div className="bg-pink-500 h-full transition-all duration-700" style={{ width: `${percFem}%` }}></div>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
-          <p className="text-[9px] font-black text-gray-400 uppercase mb-3 tracking-widest">Saúde Financeira ({percFinanceiro.toFixed(0)}%)</p>
-          <div className="w-full bg-red-100 h-8 rounded-lg overflow-hidden flex mb-2">
-            <div className="bg-emerald-500 h-full transition-all" style={{ width: `${percFinanceiro}%` }}></div>
+        {/* CARD FINANCEIRO */}
+        <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100">
+          <div className="flex justify-between items-center mb-4">
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Saúde Financeira</p>
+            <span className="text-emerald-600 font-black text-lg">{percFinanceiro.toFixed(0)}%</span>
           </div>
-          <div className="flex justify-between text-[9px] font-black uppercase tracking-tighter">
-            <span className="text-emerald-700">EM DIA: {emDia}</span>
-            <span className="text-red-600">PENDENTE: {totalValido - emDia}</span>
+          <div className="w-full bg-red-50 h-10 rounded-2xl overflow-hidden flex mb-3 p-1 border border-red-100">
+            <div className="bg-emerald-500 h-full rounded-xl transition-all duration-1000 shadow-[0_0_15px_rgba(16,185,129,0.3)]" style={{ width: `${percFinanceiro}%` }}></div>
+          </div>
+          <div className="flex justify-between text-[10px] font-black uppercase tracking-tight">
+            <span className="flex items-center text-emerald-700"><span className="w-2 h-2 bg-emerald-500 rounded-full mr-1.5"></span> EM DIA: {emDia}</span>
+            <span className="flex items-center text-red-600"><span className="w-2 h-2 bg-red-500 rounded-full mr-1.5"></span> PENDENTE: {totalValido - emDia}</span>
           </div>
         </div>
 
-        <div className="bg-blue-900 p-5 rounded-2xl shadow-lg text-white flex flex-col justify-between">
+        {/* CARD TOTAL/MATRÍCULA */}
+        <div className="bg-blue-900 p-6 rounded-[2rem] shadow-xl text-white flex flex-col justify-between transform hover:scale-[1.02] transition-transform duration-300">
           <div className="flex justify-between items-start">
-            <div><p className="text-[9px] font-black uppercase tracking-widest opacity-60">Total Atletas</p><h2 className="text-3xl font-black italic">{totalValido}</h2></div>
-            <div className="text-right"><p className="text-[9px] font-black uppercase tracking-widest opacity-60">Ativos</p><h2 className="text-3xl font-black italic text-green-400">{ativos}</h2></div>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Total de Alunos</p>
+              <h2 className="text-4xl font-black italic tracking-tighter">{totalValido}</h2>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Status Ativo</p>
+              <h2 className="text-4xl font-black italic text-green-400 tracking-tighter">{ativos}</h2>
+            </div>
           </div>
-          <button onClick={() => setIsModalOpen(true)} className="mt-4 bg-white text-blue-900 text-[10px] font-black uppercase py-2 rounded shadow-md hover:bg-blue-50">+ Nova Matrícula</button>
+          <button 
+            onClick={() => setIsModalOpen(true)} 
+            className="mt-6 bg-white text-blue-900 text-[11px] font-black uppercase py-3 rounded-xl shadow-lg hover:bg-blue-50 transition-colors active:scale-95"
+          >
+            + Nova Matrícula
+          </button>
         </div>
       </div>
 
-      {/* TABELA DE GESTÃO */}
-      <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200">
-        <table className="w-full text-left border-collapse">
-          <thead className="bg-[#1e3a8a] text-white">
-            <tr>
-              <th className="p-4 font-bold uppercase text-[10px] tracking-widest">Atleta / Info</th>
-              <th className="p-4 font-bold uppercase text-[10px] tracking-widest text-center">Vencimento</th>
-              <th className="p-4 font-bold uppercase text-[10px] tracking-widest text-center">Status</th>
-              <th className="p-4 font-bold uppercase text-[10px] tracking-widest text-right">Gestão</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {listaSegura.map((atleta) => (
-              <tr key={atleta.id} className="hover:bg-blue-50/40 transition-colors">
-                <td className="p-4">
-                  <div className="font-extrabold text-gray-800 text-sm uppercase leading-none mb-1">{atleta.nomeCompleto || atleta.nome}</div>
-                  <div className="text-[9px] font-bold text-gray-400 uppercase">{atleta.turno} • {atleta.graduacao}</div>
-                </td>
-                <td className="p-4 text-center font-bold text-gray-600 text-xs">Dia {atleta.diaVencimento || 28}</td>
-                <td className="p-4 text-center">
-                  <span className={`px-2 py-0.5 rounded text-[8px] font-black tracking-widest border ${atleta.statusPagamento === 'EM_DIA' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
-                    {atleta.statusPagamento || 'PENDENTE'}
-                  </span>
-                </td>
-                <td className="p-4 text-right">
-                  <div className="flex justify-end gap-2">
-                    <button onClick={() => handleBaixaPagamento(atleta.id)} className="p-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 shadow-sm" title="Dar Baixa">✅</button>
-                    <button onClick={() => gerarDocumentoAtleta(atleta)} className="p-2 bg-blue-600 text-white rounded hover:bg-blue-700 shadow-sm" title="Financeiro">💰</button>
-                    <button onClick={() => downloadRelatorioTecnico(atleta.id, atleta.nomeCompleto)} className="p-2 bg-slate-800 text-white rounded hover:bg-black shadow-sm" title="Técnico">🥋</button>
-                    <button 
-                      onClick={() => handleToggleStatus(atleta.id, atleta.ativo)} 
-                      className={`px-2 py-1 rounded text-[10px] font-black text-white ${atleta.ativo !== false ? 'bg-red-500' : 'bg-green-600'}`}
-                    >
-                      {atleta.ativo !== false ? "OFF" : "ON"}
-                    </button>
-                  </div>
-                </td>
+      {/* LISTAGEM DE ATLETAS */}
+      <div className="bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border border-gray-100">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-blue-900 text-white">
+                <th className="p-6 font-bold uppercase text-[11px] tracking-[0.2em]">Atleta / Graduação</th>
+                <th className="p-6 font-bold uppercase text-[11px] tracking-[0.2em] text-center">Vencimento</th>
+                <th className="p-6 font-bold uppercase text-[11px] tracking-[0.2em] text-center">Situação</th>
+                <th className="p-6 font-bold uppercase text-[11px] tracking-[0.2em] text-right">Ações de Gestão</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {listaSegura.map((atleta) => (
+                <tr key={atleta.id} className="hover:bg-blue-50/50 transition-all duration-200">
+                  <td className="p-6">
+                    <div className="font-black text-gray-800 text-base uppercase leading-tight">{atleta.nomeCompleto || atleta.nome}</div>
+                    <div className="text-[10px] font-bold text-blue-500 uppercase mt-1">
+                      🥋 {atleta.graduacao} • 🕒 {atleta.turno}
+                    </div>
+                  </td>
+                  <td className="p-6 text-center">
+                    <div className="inline-block bg-gray-100 px-3 py-1 rounded-lg text-gray-600 font-bold text-xs uppercase">
+                      Dia {atleta.diaVencimento || 10}
+                    </div>
+                  </td>
+                  <td className="p-6 text-center">
+                    <span className={`px-4 py-1.5 rounded-full text-[9px] font-black tracking-widest border-2 shadow-sm ${
+                      atleta.statusPagamento === 'EM_DIA' 
+                        ? 'bg-green-50 text-green-700 border-green-100' 
+                        : 'bg-red-50 text-red-700 border-red-100'
+                    }`}>
+                      {atleta.statusPagamento || 'PENDENTE'}
+                    </span>
+                  </td>
+                  <td className="p-6 text-right">
+                    <div className="flex justify-end gap-3">
+                      <button 
+                        onClick={() => handleBaixaPagamento(atleta.id)} 
+                        className="w-10 h-10 flex items-center justify-center bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 shadow-lg hover:shadow-emerald-100 transition-all active:scale-90" 
+                        title="Confirmar Pagamento"
+                      >
+                        ✓
+                      </button>
+                      <button 
+                        onClick={() => gerarDocumentoAtleta(atleta)} 
+                        className="w-10 h-10 flex items-center justify-center bg-blue-600 text-white rounded-xl hover:bg-blue-700 shadow-lg hover:shadow-blue-100 transition-all active:scale-90" 
+                        title="Histórico Financeiro"
+                      >
+                        $
+                      </button>
+                      <button 
+                        onClick={() => downloadRelatorioTecnico(atleta.id, atleta.nomeCompleto)} 
+                        className="w-10 h-10 flex items-center justify-center bg-slate-800 text-white rounded-xl hover:bg-black shadow-lg transition-all active:scale-90" 
+                        title="Ficha Técnica"
+                      >
+                        🥋
+                      </button>
+                      <button 
+                        onClick={() => handleToggleStatus(atleta.id, atleta.ativo)} 
+                        className={`px-3 py-1 rounded-xl text-[10px] font-black text-white shadow-md transition-all active:scale-90 ${
+                          atleta.ativo !== false ? 'bg-red-500 hover:bg-red-600' : 'bg-green-600 hover:bg-green-700'
+                        }`}
+                      >
+                        {atleta.ativo !== false ? "SUSPENDER" : "ATIVAR"}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      {/* MODAL DE CADASTRO */}
+      {/* MODAL DE CADASTRO (DESIGN REFINADO) */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="bg-blue-900 p-4 text-white flex justify-between items-center sticky top-0 z-10">
-              <h3 className="font-black uppercase tracking-widest text-xs italic">Painel de Matrícula CT</h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-white font-bold text-xl px-2">✕</button>
+        <div className="fixed inset-0 bg-blue-900/40 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">
+          <div className="bg-white rounded-[2.5rem] shadow-[0_35px_60px_-15px_rgba(0,0,0,0.3)] w-full max-w-2xl max-h-[90vh] overflow-hidden border border-gray-100">
+            <div className="bg-blue-900 p-6 text-white flex justify-between items-center">
+              <div>
+                <h3 className="font-black uppercase tracking-[0.2em] text-xs italic">Formulário de Matrícula</h3>
+                <p className="text-[9px] opacity-60 uppercase font-bold mt-1">CT FERROVIÁRIO • INGRESSO DE ATLETA</p>
+              </div>
+              <button 
+                onClick={() => setIsModalOpen(false)} 
+                className="bg-white/10 hover:bg-white/20 w-10 h-10 rounded-full flex items-center justify-center transition-colors"
+              >
+                ✕
+              </button>
             </div>
-            <div className="p-6">
-              <CadastroUsuarioForm onClose={() => setIsModalOpen(false)} onSuccess={() => { setIsModalOpen(false); fetchAtletas(); }} />
+            <div className="p-8 overflow-y-auto max-h-[calc(90vh-88px)] custom-scrollbar">
+              <CadastroUsuarioForm 
+                onClose={() => setIsModalOpen(false)} 
+                onSuccess={() => { setIsModalOpen(false); fetchAtletas(); }} 
+              />
             </div>
           </div>
         </div>
