@@ -30,12 +30,15 @@ export default function CadastroUsuarioForm({ onClose, onSuccess }: CadastroProp
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Se for ALUNO, gera um email interno para o banco não dar erro de "not null"
+    // Ajuste fino no payload antes de enviar
     const payload = {
       ...formData,
+      // Se for ALUNO e o email estiver vazio, gera um interno
       email: formData.papel === 'ALUNO' && !formData.email 
         ? `aluno_${Date.now()}@ctferroviario.com` 
-        : formData.email
+        : formData.email,
+      // Se for PROFESSOR, neutralizamos o dia de vencimento para não gerar cobrança
+      diaVencimento: formData.papel === 'PROFESSOR' ? null : formData.diaVencimento
     };
 
     try {
@@ -79,7 +82,7 @@ export default function CadastroUsuarioForm({ onClose, onSuccess }: CadastroProp
         </button>
       </div>
 
-      {/* DADOS BÁSICOS (PARA TODOS) */}
+      {/* DADOS BÁSICOS */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="md:col-span-2">
           <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Nome Completo</label>
@@ -102,7 +105,7 @@ export default function CadastroUsuarioForm({ onClose, onSuccess }: CadastroProp
 
       <hr className="border-gray-100" />
 
-      {/* DADOS LOGÍSTICOS (PARA TODOS, MAS FOCO NO ALUNO) */}
+      {/* DADOS LOGÍSTICOS */}
       <div className="space-y-4">
         {formData.papel === 'ALUNO' && (
           <div>
@@ -126,7 +129,7 @@ export default function CadastroUsuarioForm({ onClose, onSuccess }: CadastroProp
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className={`grid gap-4 ${formData.papel === 'ALUNO' ? 'grid-cols-2' : 'grid-cols-1'}`}>
           <div>
             <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Graduação</label>
             <select name="graduacao" onChange={handleChange} className="w-full p-3 border border-gray-200 rounded-xl text-sm">
@@ -141,10 +144,22 @@ export default function CadastroUsuarioForm({ onClose, onSuccess }: CadastroProp
               <option value="Preta">Preta</option>
             </select>
           </div>
-          <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Dia Vencimento</label>
-            <input type="number" name="diaVencimento" defaultValue={10} min={1} max={28} onChange={handleChange} className="w-full p-3 border border-gray-200 rounded-xl" />
-          </div>
+
+          {/* LÓGICA CONDICIONAL: Só aparece para Aluno */}
+          {formData.papel === 'ALUNO' && (
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Dia Vencimento</label>
+              <input 
+                type="number" 
+                name="diaVencimento" 
+                defaultValue={10} 
+                min={1} 
+                max={28} 
+                onChange={handleChange} 
+                className="w-full p-3 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-600" 
+              />
+            </div>
+          )}
         </div>
       </div>
 
