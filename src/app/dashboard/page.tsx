@@ -31,6 +31,7 @@ export default function DashboardAtletas() {
   // --- BUSCA DE DADOS ---
   const fetchAtletas = async () => {
     try {
+      // Adicionado cache-busting para garantir dados novos
       const response = await fetch(`${API_URL}/api/cadastro/atletas?t=${new Date().getTime()}`);
       if (!response.ok) throw new Error();
       const data = await response.json();
@@ -75,7 +76,10 @@ export default function DashboardAtletas() {
   const handleBaixaPagamento = async (id: number) => {
     const atletaAlvo = atletas.find(a => a.id === id);
     if (!atletaAlvo) return;
+    
+    // UI Feedback instantâneo
     setAtletas(prev => prev.map(a => a.id === id ? { ...a, statusPagamento: 'EM_DIA' } : a));
+    
     try {
       const resp = await fetch(`${API_URL}/api/cadastro/atletas/${id}`, {
         method: 'PATCH',
@@ -86,7 +90,10 @@ export default function DashboardAtletas() {
         gerarReciboIndividual({ ...atletaAlvo, statusPagamento: 'EM_DIA' });
         avisar(`Pagamento de ${atletaAlvo.nomeCompleto} confirmado!`);
       }
-    } catch (e) { avisar("Falha ao processar pagamento", "erro"); fetchAtletas(); }
+    } catch (e) { 
+      avisar("Falha ao processar pagamento", "erro"); 
+      fetchAtletas(); // Reverte o estado em caso de erro
+    }
   };
 
   const handleToggleStatus = async (id: number, ativo: any) => {
@@ -186,7 +193,17 @@ export default function DashboardAtletas() {
                     <div className="flex justify-end gap-2">
                         <button onClick={() => handleBaixaPagamento(atleta.id)} className="w-9 h-9 bg-emerald-500 text-white rounded-lg font-black hover:scale-110 transition-transform">✓</button>
                         <button onClick={() => gerarDocumentoAtleta(atleta)} className="w-9 h-9 bg-blue-600 text-white rounded-lg font-black hover:scale-110 transition-transform">$</button>
-                        <a href={`${API_URL}/api/cadastro/relatorio/${atleta.id}`} download className="w-9 h-9 bg-slate-700 text-white rounded-lg flex items-center justify-center font-black hover:scale-110 transition-transform">🥋</a>
+                        
+                        {/* LINK CORRIGIDO PARA O NOVO BACKEND */}
+                        <a 
+                          href={`${API_URL}/api/cadastro/atletas/${atleta.id}/relatorio-pdf`} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="w-9 h-9 bg-slate-700 text-white rounded-lg flex items-center justify-center font-black hover:scale-110 transition-transform"
+                        >
+                          🥋
+                        </a>
+
                         <button onClick={() => handleToggleStatus(atleta.id, atleta.ativo)} className={`px-3 h-9 rounded-lg text-[9px] font-black text-white ${atleta.ativo !== false ? 'bg-red-500' : 'bg-green-600'}`}>
                           {atleta.ativo !== false ? "SUSPENDER" : "ATIVAR"}
                         </button>
