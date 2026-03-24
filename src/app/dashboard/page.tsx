@@ -1,264 +1,195 @@
-"use client"; 
+"use client";
 
 import { useState, useEffect } from 'react';
-import { downloadRelatorioTecnico, updateAtletaStatus } from '@/service/api';
+import { updateAtletaStatus } from '@/service/api';
 import { gerarDocumentoAtleta } from './geradorPDF';
-import { gerarReciboIndividual } from './gerarReciboIndividual'; 
-import CadastroUsuarioForm from './CadastroUsuarioForm'; 
+import { gerarReciboIndividual } from './gerarReciboIndividual';
+import CadastroUsuarioForm from './CadastroUsuarioForm';
 
 export default function DashboardAtletas() {
+  // --- ESTADOS DE DADOS ---
   const [atletas, setAtletas] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
+  const [notificacao, setNotificacao] = useState<{msg: string, tipo: 'sucesso' | 'erro'} | null>(null);
+
+  // --- ESTADOS DE FILTRO ---
+  const [busca, setBusca] = useState('');
+  const [filtroAtividade, setFiltroAtividade] = useState<'TODOS' | 'ATIVOS' | 'INATIVOS'>('TODOS');
+  const [filtroFinanceiro, setFiltroFinanceiro] = useState<'TODOS' | 'EM_DIA' | 'PENDENTE'>('TODOS');
+  const [filtroGenero, setFiltroGenero] = useState<'TODOS' | 'MASC' | 'FEM'>('TODOS');
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://ct-ferroviario.onrender.com';
 
-  // --- LOGOUT ---
-  const handleLogout = () => {
-    document.cookie = "auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
-    localStorage.removeItem('user');
-    localStorage.removeItem('isLoggedIn');
-    window.location.href = '/';
+  // --- FUNÇÃO PARA MOSTRAR TOAST ---
+  const avisar = (msg: string, tipo: 'sucesso' | 'erro' = 'sucesso') => {
+    setNotificacao({ msg, tipo });
+    setTimeout(() => setNotificacao(null), 3000);
   };
 
   // --- BUSCA DE DADOS ---
   const fetchAtletas = async () => {
     try {
       const response = await fetch(`${API_URL}/api/cadastro/atletas?t=${new Date().getTime()}`);
-      
-      if (!response.ok) throw new Error(`Erro na API: ${response.status}`);
-
+      if (!response.ok) throw new Error();
       const data = await response.json();
-      
-      if (Array.isArray(data)) {
-        setAtletas(data);
-      } else {
-        setAtletas([]);
-      }
-    } catch (error) { 
-      console.error("Erro ao buscar atletas:", error); 
-      setAtletas([]); 
-    } finally { 
-      setLoading(false); 
-    }
+      setAtletas(Array.isArray(data) ? data : []);
+    } catch (error) {
+      avisar("Erro ao carregar dados do servidor", "erro");
+      setAtletas([]);
+    } finally { setLoading(false); }
   };
 
-  useEffect(() => { 
+  useEffect(() => {
     const loggedIn = localStorage.getItem('isLoggedIn');
-    if (!loggedIn) {
-      window.location.href = '/';
-      return;
-    }
-    fetchAtletas(); 
+    if (!loggedIn) { window.location.href = '/'; return; }
+    fetchAtletas();
   }, []);
 
-  // --- BAIXA DE PAGAMENTO (SINCRONIZADA COM JAVA) ---
+  // --- LÓGICA DE FILTRAGEM ---
+  const atletasFiltrados = atletas.filter(atleta => {
+    const nome = (atleta.nomeCompleto || atleta.nome || "").toLowerCase();
+    const bateNome = nome.includes(busca.toLowerCase());
+    const bateAtividade = filtroAtividade === 'TODOS' ? true : filtroAtividade === 'ATIVOS' ? atleta.ativo !== false : atleta.ativo === false;
+    const bateFinanceiro = filtroFinanceiro === 'TODOS' ? true : filtroFinanceiro === 'EM_DIA' ? atleta.statusPagamento === 'EM_DIA' : atleta.statusPagamento !== 'EM_DIA';
+    const gen = (atleta.genero || atleta.sexo || "").toUpperCase();
+    const bateGenero = filtroGenero === 'TODOS' ? true : filtroGenero === 'MASC' ? (gen === 'MASCULINO' || gen === 'M') : (gen === 'FEMININO' || gen === 'F');
+    return bateNome && bateAtividade && bateFinanceiro && bateGenero;
+  });
+
+  // --- EXPORTAR PARA CSV ---
+  const handleExportar = () => {
+    const cabecalho = "Nome;Graduacao;Turno;Vencimento;Status\n";
+    const corpo = atletasFiltrados.map(a => `${a.nomeCompleto};${a.graduacao};${a.turno};${a.diaVencimento};${a.statusPagamento}`).join("\n");
+    const blob = new Blob(["\ufeff" + cabecalho + corpo], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `Relatorio_CTF_${new Date().toLocaleDateString()}.csv`;
+    link.click();
+    avisar("Relatório Excel (CSV) gerado!");
+  };
+
+  // --- AÇÕES ---
   const handleBaixaPagamento = async (id: number) => {
     const atletaAlvo = atletas.find(a => a.id === id);
     if (!atletaAlvo) return;
-
-    // Backup para reverter se der erro no servidor
-    const backupAtletas = [...atletas];
-
-    // Atualização Otimista (Melhora a UX)
-    setAtletas(prev => prev.map(a => 
-      a.id === id ? { ...a, statusPagamento: 'EM_DIA' } : a
-    ));
-
+    setAtletas(prev => prev.map(a => a.id === id ? { ...a, statusPagamento: 'EM_DIA' } : a));
     try {
-      const response = await fetch(`${API_URL}/api/cadastro/atletas/${id}`, {
+      const resp = await fetch(`${API_URL}/api/cadastro/atletas/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ statusPagamento: 'EM_DIA' })
       });
-
-      if (response.ok) {
-        // Se gravou no Java, gera o recibo
+      if (resp.ok) { 
         gerarReciboIndividual({ ...atletaAlvo, statusPagamento: 'EM_DIA' });
-      } else {
-        // Se o Java deu erro (ex: Erro 500), volta o status para Pendente
-        setAtletas(backupAtletas);
-        alert("Erro no servidor: O pagamento não pôde ser processado no banco.");
+        avisar(`Pagamento de ${atletaAlvo.nomeCompleto} confirmado!`);
       }
-    } catch (error) {
-      console.error("Erro de conexão:", error);
-      setAtletas(backupAtletas);
-      alert("Falha na conexão com o servidor do CT.");
-    }
+    } catch (e) { avisar("Falha ao processar pagamento", "erro"); fetchAtletas(); }
   };
 
-  // --- ATIVAR/DESATIVAR ATLETA ---
-  const handleToggleStatus = async (id: number, statusAtual: any) => {
-    const novoStatus = statusAtual === false;
+  const handleToggleStatus = async (id: number, ativo: any) => {
     try {
-      await updateAtletaStatus(id, novoStatus);
-      setAtletas(prev => prev.map(a => a.id === id ? { ...a, ativo: novoStatus } : a));
-    } catch (err) { 
-      alert("Erro ao alterar status de atividade."); 
-    }
+      await updateAtletaStatus(id, !ativo);
+      setAtletas(prev => prev.map(a => a.id === id ? { ...a, ativo: !ativo } : a));
+      avisar(`Status do atleta atualizado!`);
+    } catch (e) { avisar("Erro ao mudar status", "erro"); }
   };
 
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 text-blue-900 font-black italic animate-pulse uppercase tracking-widest">
-      Carregando CT Ferroviário...
-    </div>
-  );
-
-  // --- CÁLCULOS DE GESTÃO ---
-  const listaSegura = Array.isArray(atletas) ? atletas : [];
-  const totalValido = listaSegura.length;
-  const divisor = totalValido > 0 ? totalValido : 1;
-
-  const masc = listaSegura.filter(a => a?.genero === 'MASCULINO' || a?.sexo === 'M').length;
-  const fem = listaSegura.filter(a => a?.genero === 'FEMININO' || a?.sexo === 'F').length;
-  const ativos = listaSegura.filter(a => a?.ativo !== false).length;
-  const emDia = listaSegura.filter(a => a?.statusPagamento === 'EM_DIA').length;
-
-  const percMasc = (masc / divisor) * 100;
-  const percFem = (fem / divisor) * 100;
-  const percFinanceiro = (emDia / divisor) * 100;
+  if (loading) return <div className="min-h-screen flex items-center justify-center font-black text-blue-900 animate-pulse italic uppercase">Carregando CT Ferroviário...</div>;
 
   return (
-    <div className="p-4 md:p-8 bg-gray-50 min-h-screen text-black font-sans">
+    <div className={`p-4 md:p-8 min-h-screen transition-all duration-500 font-sans ${darkMode ? 'bg-slate-950 text-white' : 'bg-gray-50 text-black'}`}>
       
-      {/* HEADER PROFISSIONAL */}
-      <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-end border-b border-gray-200 pb-6 gap-4">
+      {/* --- SISTEMA DE NOTIFICAÇÃO (TOAST) --- */}
+      {notificacao && (
+        <div className={`fixed top-5 right-5 z- px-6 py-4 rounded-2xl shadow-2xl font-black uppercase italic text-[10px] tracking-widest animate-bounce border-b-4 ${notificacao.tipo === 'sucesso' ? 'bg-emerald-500 text-white border-emerald-700' : 'bg-red-600 text-white border-red-800'}`}>
+          {notificacao.tipo === 'sucesso' ? '✓ ' : '⚠ '} {notificacao.msg}
+        </div>
+      )}
+
+      {/* HEADER */}
+      <div className={`mb-8 flex flex-col md:flex-row justify-between items-start md:items-end border-b pb-6 gap-4 ${darkMode ? 'border-slate-800' : 'border-gray-200'}`}>
         <div>
-          <h1 className="text-4xl font-black text-blue-900 uppercase italic tracking-tighter leading-none">CT FERROVIÁRIO</h1>
-          <p className="text-[11px] font-bold text-gray-500 uppercase tracking-[0.3em] mt-2"> • Sistema de Gestão de Atletas • </p>
-        </div>
-        <button 
-          onClick={handleLogout} 
-          className="bg-white text-red-600 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase hover:bg-red-600 hover:text-white transition-all duration-300 border border-red-100 shadow-sm active:scale-95"
-        >
-          Sair do Sistema
-        </button>
-      </div>
-
-      {/* DASHBOARD CARDS */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        
-        {/* CARD GÊNERO */}
-        <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100">
-          <p className="text-[10px] font-black text-gray-400 uppercase mb-4 tracking-widest">Censo da Academia</p>
-          <div className="space-y-4">
-            <div>
-              <div className="flex justify-between text-[11px] font-black mb-1.5 uppercase text-blue-700">♂ Masculino ({masc})</div>
-              <div className="w-full bg-gray-100 h-3.5 rounded-full overflow-hidden">
-                <div className="bg-blue-600 h-full transition-all duration-700" style={{ width: `${percMasc}%` }}></div>
-              </div>
-            </div>
-            <div>
-              <div className="flex justify-between text-[11px] font-black mb-1.5 uppercase text-pink-600">♀ Feminino ({fem})</div>
-              <div className="w-full bg-gray-100 h-3.5 rounded-full overflow-hidden">
-                <div className="bg-pink-500 h-full transition-all duration-700" style={{ width: `${percFem}%` }}></div>
-              </div>
-            </div>
+          <h1 className={`text-4xl font-black uppercase italic tracking-tighter leading-none ${darkMode ? 'text-white' : 'text-blue-900'}`}>CT FERROVIÁRIO</h1>
+          <div className="flex gap-4 mt-2">
+            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.3em]">Painel de Controle</p>
+            <button onClick={() => setDarkMode(!darkMode)} className={`text-[9px] font-black uppercase px-2 py-0.5 rounded border ${darkMode ? 'border-slate-700 text-yellow-400' : 'border-gray-300 text-blue-900'}`}>
+              {darkMode ? '☀️ Modo Claro' : '🌙 Modo Escuro'}
+            </button>
           </div>
         </div>
-
-        {/* CARD FINANCEIRO */}
-        <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100">
-          <div className="flex justify-between items-center mb-4">
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Saúde Financeira</p>
-            <span className="text-emerald-600 font-black text-lg">{percFinanceiro.toFixed(0)}%</span>
-          </div>
-          <div className="w-full bg-red-50 h-10 rounded-2xl overflow-hidden flex mb-3 p-1 border border-red-100">
-            <div className="bg-emerald-500 h-full rounded-xl transition-all duration-1000 shadow-[0_0_15px_rgba(16,185,129,0.3)]" style={{ width: `${percFinanceiro}%` }}></div>
-          </div>
-          <div className="flex justify-between text-[10px] font-black uppercase tracking-tight">
-            <span className="flex items-center text-emerald-700"><span className="w-2 h-2 bg-emerald-500 rounded-full mr-1.5"></span> EM DIA: {emDia}</span>
-            <span className="flex items-center text-red-600"><span className="w-2 h-2 bg-red-500 rounded-full mr-1.5"></span> PENDENTE: {totalValido - emDia}</span>
-          </div>
-        </div>
-
-        {/* CARD TOTAL/MATRÍCULA */}
-        <div className="bg-blue-900 p-6 rounded-[2rem] shadow-xl text-white flex flex-col justify-between transform hover:scale-[1.02] transition-transform duration-300">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Total de Alunos</p>
-              <h2 className="text-4xl font-black italic tracking-tighter">{totalValido}</h2>
-            </div>
-            <div className="text-right">
-              <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Status Ativo</p>
-              <h2 className="text-4xl font-black italic text-green-400 tracking-tighter">{ativos}</h2>
-            </div>
-          </div>
-          <button 
-            onClick={() => setIsModalOpen(true)} 
-            className="mt-6 bg-white text-blue-900 text-[11px] font-black uppercase py-3 rounded-xl shadow-lg hover:bg-blue-50 transition-colors active:scale-95"
-          >
-            + Nova Matrícula
-          </button>
+        <div className="flex gap-2">
+            <button onClick={handleExportar} className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-emerald-700 transition-all">Exportar Planilha</button>
+            <button onClick={() => { localStorage.clear(); window.location.href='/'; }} className="bg-red-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase">Sair</button>
         </div>
       </div>
 
-      {/* LISTAGEM DE ATLETAS */}
-      <div className="bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border border-gray-100">
+      {/* FILTROS INTELIGENTES */}
+      <div className={`p-6 rounded-[2rem] shadow-sm border mb-8 space-y-4 ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-100'}`}>
+        <div className="flex flex-col xl:flex-row gap-4">
+          <input 
+            type="text" 
+            placeholder="🔍 Buscar atleta pelo nome..." 
+            className={`flex-1 p-3 rounded-xl outline-none text-sm font-bold uppercase italic border transition-all ${darkMode ? 'bg-slate-800 border-slate-700 text-white focus:ring-blue-500' : 'bg-gray-50 border-gray-200 focus:ring-blue-900'}`}
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+          />
+
+          <div className="flex flex-wrap gap-3">
+            <div className={`flex p-1 rounded-xl border ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-50 border-gray-100'}`}>
+              {['TODOS', 'ATIVOS', 'INATIVOS'].map((f) => (
+                <button key={f} onClick={() => setFiltroAtividade(f as any)} className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all ${filtroAtividade === f ? 'bg-blue-600 text-white shadow-md' : 'text-gray-400'}`}>{f}</button>
+              ))}
+            </div>
+            <div className={`flex p-1 rounded-xl border ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-50 border-gray-100'}`}>
+              {['TODOS', 'EM_DIA', 'PENDENTE'].map((f) => (
+                <button key={f} onClick={() => setFiltroFinanceiro(f as any)} className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all ${filtroFinanceiro === f ? 'bg-emerald-600 text-white shadow-md' : 'text-gray-400'}`}>{f}</button>
+              ))}
+            </div>
+            <div className={`flex p-1 rounded-xl border ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-50 border-gray-100'}`}>
+              {['TODOS', 'MASC', 'FEM'].map((f) => (
+                <button key={f} onClick={() => setFiltroGenero(f as any)} className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all ${filtroGenero === f ? 'bg-pink-600 text-white shadow-md' : 'text-gray-400'}`}>{f}</button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* TABELA */}
+      <div className={`rounded-[2rem] shadow-2xl border overflow-hidden ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-100'}`}>
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left border-collapse min-w-[900px]">
             <thead>
-              <tr className="bg-blue-900 text-white">
-                <th className="p-6 font-bold uppercase text-[11px] tracking-[0.2em]">Atleta / Graduação</th>
-                <th className="p-6 font-bold uppercase text-[11px] tracking-[0.2em] text-center">Vencimento</th>
-                <th className="p-6 font-bold uppercase text-[11px] tracking-[0.2em] text-center">Situação</th>
-                <th className="p-6 font-bold uppercase text-[11px] tracking-[0.2em] text-right">Ações de Gestão</th>
+              <tr className={darkMode ? 'bg-slate-800 text-white' : 'bg-blue-900 text-white'}>
+                <th className="p-6 font-bold uppercase text-[10px] tracking-widest italic">Atleta / Graduação</th>
+                <th className="p-6 font-bold uppercase text-[10px] tracking-widest text-center italic">Vencimento</th>
+                <th className="p-6 font-bold uppercase text-[10px] tracking-widest text-center italic">Financeiro</th>
+                <th className="p-6 font-bold uppercase text-[10px] tracking-widest text-right italic">Gestão</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
-              {listaSegura.map((atleta) => (
-                <tr key={atleta.id} className="hover:bg-blue-50/50 transition-all duration-200">
+            <tbody className={`divide-y ${darkMode ? 'divide-slate-800' : 'divide-gray-50'}`}>
+              {atletasFiltrados.map((atleta) => (
+                <tr key={atleta.id} className={`transition-colors ${darkMode ? 'hover:bg-slate-800/50' : 'hover:bg-blue-50/40'}`}>
                   <td className="p-6">
-                    <div className="font-black text-gray-800 text-base uppercase leading-tight">{atleta.nomeCompleto || atleta.nome}</div>
-                    <div className="text-[10px] font-bold text-blue-500 uppercase mt-1">
-                      🥋 {atleta.graduacao} • 🕒 {atleta.turno}
-                    </div>
+                    <div className="font-black text-base uppercase leading-tight">{atleta.nomeCompleto || atleta.nome}</div>
+                    <div className="text-[10px] font-bold text-blue-500 mt-1 uppercase">🥋 {atleta.graduacao} • {atleta.turno}</div>
                   </td>
+                  <td className="p-6 text-center font-bold text-gray-500 text-xs">DIA {atleta.diaVencimento || 10}</td>
                   <td className="p-6 text-center">
-                    <div className="inline-block bg-gray-100 px-3 py-1 rounded-lg text-gray-600 font-bold text-xs uppercase">
-                      Dia {atleta.diaVencimento || 10}
-                    </div>
-                  </td>
-                  <td className="p-6 text-center">
-                    <span className={`px-4 py-1.5 rounded-full text-[9px] font-black tracking-widest border-2 shadow-sm ${
-                      atleta.statusPagamento === 'EM_DIA' 
-                        ? 'bg-green-50 text-green-700 border-green-100' 
-                        : 'bg-red-50 text-red-700 border-red-100'
-                    }`}>
+                    <span className={`px-3 py-1 rounded-full text-[9px] font-black border-2 ${atleta.statusPagamento === 'EM_DIA' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20 animate-pulse'}`}>
                       {atleta.statusPagamento || 'PENDENTE'}
                     </span>
                   </td>
-                  <td className="p-6 text-right">
-                    <div className="flex justify-end gap-3">
-                      <button 
-                        onClick={() => handleBaixaPagamento(atleta.id)} 
-                        className="w-10 h-10 flex items-center justify-center bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 shadow-lg hover:shadow-emerald-100 transition-all active:scale-90" 
-                        title="Confirmar Pagamento"
-                      >
-                        ✓
-                      </button>
-                      <button 
-                        onClick={() => gerarDocumentoAtleta(atleta)} 
-                        className="w-10 h-10 flex items-center justify-center bg-blue-600 text-white rounded-xl hover:bg-blue-700 shadow-lg hover:shadow-blue-100 transition-all active:scale-90" 
-                        title="Histórico Financeiro"
-                      >
-                        $
-                      </button>
-                      <button 
-                        onClick={() => downloadRelatorioTecnico(atleta.id, atleta.nomeCompleto)} 
-                        className="w-10 h-10 flex items-center justify-center bg-slate-800 text-white rounded-xl hover:bg-black shadow-lg transition-all active:scale-90" 
-                        title="Ficha Técnica"
-                      >
-                        🥋
-                      </button>
-                      <button 
-                        onClick={() => handleToggleStatus(atleta.id, atleta.ativo)} 
-                        className={`px-3 py-1 rounded-xl text-[10px] font-black text-white shadow-md transition-all active:scale-90 ${
-                          atleta.ativo !== false ? 'bg-red-500 hover:bg-red-600' : 'bg-green-600 hover:bg-green-700'
-                        }`}
-                      >
-                        {atleta.ativo !== false ? "SUSPENDER" : "ATIVAR"}
-                      </button>
+                  <td className="p-6">
+                    <div className="flex justify-end gap-2">
+                        <button onClick={() => handleBaixaPagamento(atleta.id)} className="w-9 h-9 bg-emerald-500 text-white rounded-lg font-black hover:scale-110 transition-transform">✓</button>
+                        <button onClick={() => gerarDocumentoAtleta(atleta)} className="w-9 h-9 bg-blue-600 text-white rounded-lg font-black hover:scale-110 transition-transform">$</button>
+                        <a href={`${API_URL}/api/cadastro/relatorio/${atleta.id}`} download className="w-9 h-9 bg-slate-700 text-white rounded-lg flex items-center justify-center font-black hover:scale-110 transition-transform">🥋</a>
+                        <button onClick={() => handleToggleStatus(atleta.id, atleta.ativo)} className={`px-3 h-9 rounded-lg text-[9px] font-black text-white ${atleta.ativo !== false ? 'bg-red-500' : 'bg-green-600'}`}>
+                          {atleta.ativo !== false ? "SUSPENDER" : "ATIVAR"}
+                        </button>
                     </div>
                   </td>
                 </tr>
@@ -268,27 +199,20 @@ export default function DashboardAtletas() {
         </div>
       </div>
 
-      {/* MODAL DE CADASTRO (DESIGN REFINADO) */}
+      {/* BOTÃO FLUTUANTE DE MATRÍCULA */}
+      <button onClick={() => setIsModalOpen(true)} className="fixed bottom-8 right-8 bg-blue-700 text-white px-8 py-4 rounded-full font-black uppercase italic shadow-2xl hover:scale-105 transition-all z-40 border-4 border-white">
+        + Matricular Atleta
+      </button>
+
+      {/* MODAL */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-blue-900/40 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">
-          <div className="bg-white rounded-[2.5rem] shadow-[0_35px_60px_-15px_rgba(0,0,0,0.3)] w-full max-w-2xl max-h-[90vh] overflow-hidden border border-gray-100">
-            <div className="bg-blue-900 p-6 text-white flex justify-between items-center">
-              <div>
-                <h3 className="font-black uppercase tracking-[0.2em] text-xs italic">Formulário de Matrícula</h3>
-                <p className="text-[9px] opacity-60 uppercase font-bold mt-1">CT FERROVIÁRIO • INGRESSO DE ATLETA</p>
-              </div>
-              <button 
-                onClick={() => setIsModalOpen(false)} 
-                className="bg-white/10 hover:bg-white/20 w-10 h-10 rounded-full flex items-center justify-center transition-colors"
-              >
-                ✕
-              </button>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-50 p-4">
+          <div className={`rounded-[2rem] shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col border ${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-gray-100'}`}>
+            <div className="bg-blue-900 p-6 text-white flex justify-between items-center font-black italic uppercase text-xs">
+              Nova Inscrição <button onClick={() => setIsModalOpen(false)} className="text-xl">✕</button>
             </div>
-            <div className="p-8 overflow-y-auto max-h-[calc(90vh-88px)] custom-scrollbar">
-              <CadastroUsuarioForm 
-                onClose={() => setIsModalOpen(false)} 
-                onSuccess={() => { setIsModalOpen(false); fetchAtletas(); }} 
-              />
+            <div className="p-6 overflow-y-auto custom-scrollbar">
+              <CadastroUsuarioForm onClose={() => setIsModalOpen(false)} onSuccess={() => { setIsModalOpen(false); fetchAtletas(); avisar("Atleta matriculado com sucesso!"); }} />
             </div>
           </div>
         </div>
