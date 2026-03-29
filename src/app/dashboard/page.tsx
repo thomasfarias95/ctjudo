@@ -23,8 +23,9 @@ export default function DashboardAtletas() {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://ct-ferroviario.onrender.com';
 
   const GRADUACOES = [
-    "BRANCA", "CINZA", "AZUL", "AMARELA", "LARANJA", 
-    "VERDE", "ROXA", "MARROM", "PRETA 1º DAN", "PRETA 2º DAN"
+    "BRANCA","BRANCA/CINZA" ,"CINZA","CINZA/AZUL", "AZUL", "AZUL/AMARELA","AMARELA","AMARELA/LARANJA", "LARANJA", 
+    "VERDE", "ROXA", "MARROM", "PRETA 1º DAN", "PRETA 2º DAN","PRETA 3º DAN","PRETA 4º DAN","PRETA 5º DAN","KODANSHA 6º DAN",
+    "KODANSHA 7º DAN","KODANSHA 8º DAN", "KODANSHA 9º DAN", "KODANSHA 10º DAN"
   ];
 
   // --- FUNÇÃO PARA MOSTRAR TOAST ---
