@@ -22,6 +22,11 @@ export default function DashboardAtletas() {
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://ct-ferroviario.onrender.com';
 
+  const GRADUACOES = [
+    "BRANCA", "CINZA", "AZUL", "AMARELA", "LARANJA", 
+    "VERDE", "ROXA", "MARROM", "PRETA 1º DAN", "PRETA 2º DAN"
+  ];
+
   // --- FUNÇÃO PARA MOSTRAR TOAST ---
   const avisar = (msg: string, tipo: 'sucesso' | 'erro' = 'sucesso') => {
     setNotificacao({ msg, tipo });
@@ -31,7 +36,6 @@ export default function DashboardAtletas() {
   // --- BUSCA DE DADOS ---
   const fetchAtletas = async () => {
     try {
-      // Adicionado cache-busting para garantir dados novos
       const response = await fetch(`${API_URL}/api/cadastro/atletas?t=${new Date().getTime()}`);
       if (!response.ok) throw new Error();
       const data = await response.json();
@@ -47,6 +51,29 @@ export default function DashboardAtletas() {
     if (!loggedIn) { window.location.href = '/'; return; }
     fetchAtletas();
   }, []);
+
+  // --- ATUALIZAÇÃO MANUAL DE GRADUAÇÃO ---
+  const handleUpdateGraduacao = async (id: number, novaGraduacao: string) => {
+    try {
+      // Update local para velocidade de UI
+      setAtletas(prev => prev.map(a => a.id === id ? { ...a, graduacao: novaGraduacao } : a));
+
+      const resp = await fetch(`${API_URL}/api/cadastro/atletas/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ graduacao: novaGraduacao })
+      });
+
+      if (resp.ok) {
+        avisar("Graduação atualizada com sucesso!");
+      } else {
+        throw new Error();
+      }
+    } catch (e) {
+      avisar("Erro ao salvar graduação", "erro");
+      fetchAtletas(); // Reverte se falhar
+    }
+  };
 
   // --- LÓGICA DE FILTRAGEM ---
   const atletasFiltrados = atletas.filter(atleta => {
@@ -77,7 +104,6 @@ export default function DashboardAtletas() {
     const atletaAlvo = atletas.find(a => a.id === id);
     if (!atletaAlvo) return;
     
-    // UI Feedback instantâneo
     setAtletas(prev => prev.map(a => a.id === id ? { ...a, statusPagamento: 'EM_DIA' } : a));
     
     try {
@@ -92,7 +118,7 @@ export default function DashboardAtletas() {
       }
     } catch (e) { 
       avisar("Falha ao processar pagamento", "erro"); 
-      fetchAtletas(); // Reverte o estado em caso de erro
+      fetchAtletas(); 
     }
   };
 
@@ -104,14 +130,14 @@ export default function DashboardAtletas() {
     } catch (e) { avisar("Erro ao mudar status", "erro"); }
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center font-black text-blue-900 animate-pulse italic uppercase">Carregando CT Ferroviário...</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center font-black text-blue-900 animate-pulse italic uppercase text-sm">Carregando CT Ferroviário...</div>;
 
   return (
     <div className={`p-4 md:p-8 min-h-screen transition-all duration-500 font-sans ${darkMode ? 'bg-slate-950 text-white' : 'bg-gray-50 text-black'}`}>
       
-      {/* --- SISTEMA DE NOTIFICAÇÃO (TOAST) --- */}
+      {/* NOTIFICAÇÃO (TOAST) */}
       {notificacao && (
-        <div className={`fixed top-5 right-5 z- px-6 py-4 rounded-2xl shadow-2xl font-black uppercase italic text-[10px] tracking-widest animate-bounce border-b-4 ${notificacao.tipo === 'sucesso' ? 'bg-emerald-500 text-white border-emerald-700' : 'bg-red-600 text-white border-red-800'}`}>
+        <div className={`fixed top-5 right-5 z-50 px-6 py-4 rounded-2xl shadow-2xl font-black uppercase italic text-[10px] tracking-widest animate-bounce border-b-4 ${notificacao.tipo === 'sucesso' ? 'bg-emerald-500 text-white border-emerald-700' : 'bg-red-600 text-white border-red-800'}`}>
           {notificacao.tipo === 'sucesso' ? '✓ ' : '⚠ '} {notificacao.msg}
         </div>
       )}
@@ -133,7 +159,7 @@ export default function DashboardAtletas() {
         </div>
       </div>
 
-      {/* FILTROS INTELIGENTES */}
+      {/* FILTROS */}
       <div className={`p-6 rounded-[2rem] shadow-sm border mb-8 space-y-4 ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-100'}`}>
         <div className="flex flex-col xl:flex-row gap-4">
           <input 
@@ -164,7 +190,7 @@ export default function DashboardAtletas() {
         </div>
       </div>
 
-      {/* TABELA */}
+      {/* TABELA COM EDIÇÃO DE GRADUAÇÃO */}
       <div className={`rounded-[2rem] shadow-2xl border overflow-hidden ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-100'}`}>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[900px]">
@@ -181,7 +207,23 @@ export default function DashboardAtletas() {
                 <tr key={atleta.id} className={`transition-colors ${darkMode ? 'hover:bg-slate-800/50' : 'hover:bg-blue-50/40'}`}>
                   <td className="p-6">
                     <div className="font-black text-base uppercase leading-tight">{atleta.nomeCompleto || atleta.nome}</div>
-                    <div className="text-[10px] font-bold text-blue-500 mt-1 uppercase">🥋 {atleta.graduacao} • {atleta.turno}</div>
+                    
+                    {/* SELECT DE GRADUAÇÃO EDITÁVEL */}
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[10px]">🥋</span>
+                      <select 
+                        value={atleta.graduacao?.toUpperCase()} 
+                        onChange={(e) => handleUpdateGraduacao(atleta.id, e.target.value)}
+                        className={`bg-transparent text-[10px] font-black uppercase outline-none border-b border-transparent hover:border-blue-500 transition-all cursor-pointer ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}
+                      >
+                        {GRADUACOES.map(g => (
+                          <option key={g} value={g} className={darkMode ? 'bg-slate-900 text-white' : 'bg-white text-black'}>
+                            {g}
+                          </option>
+                        ))}
+                      </select>
+                      <span className="text-[10px] font-bold text-gray-500 uppercase">• {atleta.turno}</span>
+                    </div>
                   </td>
                   <td className="p-6 text-center font-bold text-gray-500 text-xs">DIA {atleta.diaVencimento || 10}</td>
                   <td className="p-6 text-center">
@@ -194,7 +236,6 @@ export default function DashboardAtletas() {
                         <button onClick={() => handleBaixaPagamento(atleta.id)} className="w-9 h-9 bg-emerald-500 text-white rounded-lg font-black hover:scale-110 transition-transform">✓</button>
                         <button onClick={() => gerarDocumentoAtleta(atleta)} className="w-9 h-9 bg-blue-600 text-white rounded-lg font-black hover:scale-110 transition-transform">$</button>
                         
-                        {/* LINK CORRIGIDO PARA O NOVO BACKEND */}
                         <a 
                           href={`${API_URL}/api/cadastro/atletas/${atleta.id}/relatorio-pdf`} 
                           target="_blank" 
@@ -216,7 +257,7 @@ export default function DashboardAtletas() {
         </div>
       </div>
 
-      {/* BOTÃO FLUTUANTE DE MATRÍCULA */}
+      {/* MATRÍCULA */}
       <button onClick={() => setIsModalOpen(true)} className="fixed bottom-8 right-8 bg-blue-700 text-white px-8 py-4 rounded-full font-black uppercase italic shadow-2xl hover:scale-105 transition-all z-40 border-4 border-white">
         + Matricular Atleta
       </button>

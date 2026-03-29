@@ -16,10 +16,10 @@ const classTypes: ClassType[] = [
     title: 'Judô Infantil',
     description: 'Aulas dinâmicas e educativas para crianças, focando em coordenação motora, disciplina e socialização de forma lúdica.',
     ageRange: '4 a 14 anos',
-    schedule: 'Manhã (10:00), Tarde (16:00) e Noite (19:00)',
+    schedule: 'Noite (19:00)', // Removido Manhã e Tarde
     image: "/kids.jpg", 
-    whatsappMsg: "Olá! Tenho interesse na turma de Judô Infantil. Poderia me passar mais detalhes sobre as vagas para os novos horários de Abril?",
-    isNew: true 
+    whatsappMsg: "Olá! Tenho interesse na turma de Judô Infantil. Poderia me passar mais detalhes sobre as vagas e horários disponíveis?",
+    isNew: false // Removido o badge de "Novidade" por enquanto
   },
   {
     title: 'Judô Juvenil e Adulto',
@@ -33,7 +33,7 @@ const classTypes: ClassType[] = [
     title: 'Aulas Particulares',
     description: 'Treinamento individualizado com foco em Kata, aprofundamento técnico ou preparação para exames de faixa.',
     ageRange: 'Todas as idades',
-    schedule: 'Manhã e Tarde (Agendamento Flexível)',
+    schedule: 'Horários sob consulta', // Removido Manhã e Tarde
     image: "/kata.jpg", 
     whatsappMsg: "Olá! Gostaria de agendar uma aula particular ou treinamento de Kata personalizado com o Sensei."
   },
@@ -41,7 +41,6 @@ const classTypes: ClassType[] = [
 
 const Classes: React.FC = () => {
   const handleWhatsApp = (message: string) => {
-    // SEU NÚMERO ATUALIZADO
     const phone = "5581998264250"; 
     const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
     window.open(url, "_blank");
@@ -55,7 +54,7 @@ const Classes: React.FC = () => {
         </h2>
         <p className="text-gray-400 mb-16 max-w-2xl mx-auto font-medium">
           Escolha a modalidade ideal e venha treinar com a Equipe <span className="text-white">CT Ferroviário</span>. 
-          Matrículas abertas para os novos horários de Abril!
+          Matrículas abertas! {/* Texto de Abril removido */}
         </p>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
@@ -64,14 +63,12 @@ const Classes: React.FC = () => {
               key={index} 
               className="bg-slate-900 p-2 rounded-[2rem] shadow-2xl hover:shadow-orange-600/10 transition-all duration-500 transform hover:-translate-y-3 flex flex-col h-full border border-slate-800 relative overflow-hidden group"
             >
-              {/* Badge Dinâmica de Abril */}
               {classInfo.isNew && (
                 <div className="absolute top-6 right-[-35px] bg-orange-600 text-white text-[10px] font-black py-1.5 px-12 rotate-45 shadow-xl z-10 uppercase tracking-widest">
                   Novidade
                 </div>
               )}
 
-              {/* Container da Imagem */}
               <div className="relative h-60 w-full rounded-[1.5rem] overflow-hidden mb-6">
                 <Image
                   src={classInfo.image}
@@ -92,7 +89,6 @@ const Classes: React.FC = () => {
                 </p>
               </div>
 
-              {/* Informações de Logística */}
               <div className="mx-6 mb-8 bg-black/40 p-5 rounded-2xl text-left border border-slate-800">
                 <div className="mb-4">
                   <span className="flex items-center gap-2 text-[10px] font-black text-orange-600 uppercase tracking-[0.2em] mb-1">
@@ -110,7 +106,6 @@ const Classes: React.FC = () => {
                 </div>
               </div>
 
-              {/* Botão de Ação */}
               <div className="px-6 pb-6">
                 <button
                   onClick={() => handleWhatsApp(classInfo.whatsappMsg)}

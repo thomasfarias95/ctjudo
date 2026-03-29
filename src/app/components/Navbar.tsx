@@ -15,7 +15,7 @@ const Navbar: React.FC = () => {
     { href: "/#teacher", label: "Sensei" }, // Verifique se o ID na Home é 'teacher'
     { href: "/#classes", label: "Aulas" },
     { href: "/#contact", label: "Contato" },
-    { href: "/login", label: "Área Restrita" }, // Adicionado para facilitar o acesso
+    { href: "/login", label: "Área do Professor" }, // Adicionado para facilitar o acesso
   ];
 
   return (
