@@ -28,18 +28,26 @@ export default function LoginPage() {
       if (res.ok) {
         const userData = await res.json();
         
+        // userData agora contém: { token, nome, papel, foto }
         if (typeof window !== 'undefined') {
-          document.cookie = "auth_token=true; path=/; max-age=28800; SameSite=Lax";
+          // 1. SALVAR O TOKEN (Isso é o que o seu Axios vai ler depois)
+          localStorage.setItem('token', userData.token);
+          
+          // 2. Salvar dados do perfil para exibir no Dashboard
           localStorage.setItem('user', JSON.stringify(userData));
           localStorage.setItem('isLoggedIn', 'true');
+
+          // 3. Cookie para Middleware (opcional, mas ajuda na proteção de rotas)
+          document.cookie = `auth_token=${userData.token}; path=/; max-age=28800; SameSite=Lax`;
+
           router.push('/dashboard');
         }
       } else {
-        const data = await res.json().catch(() => ({}));
-        setError(data.message || 'Credenciais inválidas.');
+        // O Spring retorna 401 para credenciais erradas
+        setError('E-mail ou senha incorretos. Verifique seus dados.');
       }
     } catch (err) {
-      setError('Erro ao conectar com o servidor.');
+      setError('O servidor do CT Ferroviário parece estar offline.');
     } finally {
       setLoading(false);
     }

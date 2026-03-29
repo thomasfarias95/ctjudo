@@ -13,7 +13,6 @@ export default function CadastroUsuarioForm({ onClose, onSuccess }: CadastroProp
     senha: '123', 
     dataNascimento: '',
     sexo: 'M',
-    turno: 'MANHA',
     graduacao: 'Branca',
     nomeResponsavel: '',
     telefone: '',
@@ -30,15 +29,13 @@ export default function CadastroUsuarioForm({ onClose, onSuccess }: CadastroProp
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Ajuste fino no payload antes de enviar
+    // PAYLOAD LIMPO: Sem turno e com isenção para Professor
     const payload = {
       ...formData,
-      // Se for ALUNO e o email estiver vazio, gera um interno
       email: formData.papel === 'ALUNO' && !formData.email 
         ? `aluno_${Date.now()}@ctferroviario.com` 
         : formData.email,
-      // Se for PROFESSOR, neutralizamos o dia de vencimento para não gerar cobrança
-      diaVencimento: formData.papel === 'PROFESSOR' ? null : formData.diaVencimento
+      diaVencimento: formData.papel === 'PROFESSOR' ? null : formData.diaVencimento,
     };
 
     try {
@@ -49,7 +46,7 @@ export default function CadastroUsuarioForm({ onClose, onSuccess }: CadastroProp
       });
 
       if (res.ok) {
-        alert("Cadastro realizado com sucesso!");
+        alert("Cadastro realizado com sucesso! Oss!");
         onSuccess();
       } else {
         const errorMsg = await res.text();
@@ -62,130 +59,104 @@ export default function CadastroUsuarioForm({ onClose, onSuccess }: CadastroProp
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5 text-black">
+    <form onSubmit={handleSubmit} className="space-y-4 text-black">
       
-      {/* SELETOR DE PAPEL */}
-      <div className="flex bg-gray-100 p-1 rounded-xl">
+      {/* SELETOR DE PERFIL */}
+      <div className="flex bg-gray-100 p-1 rounded-2xl border border-gray-200">
         <button 
           type="button"
           onClick={() => setFormData({...formData, papel: 'ALUNO'})}
-          className={`flex-1 py-2 text-xs font-bold rounded-lg transition ${formData.papel === 'ALUNO' ? 'bg-white shadow text-blue-900' : 'text-gray-500'}`}
+          className={`flex-1 py-3 text-[10px] font-black rounded-xl transition-all uppercase italic ${formData.papel === 'ALUNO' ? 'bg-blue-900 shadow-lg text-white' : 'text-gray-400'}`}
         >
-          NOVO ALUNO
+          Novo Aluno
         </button>
         <button 
           type="button"
           onClick={() => setFormData({...formData, papel: 'PROFESSOR'})}
-          className={`flex-1 py-2 text-xs font-bold rounded-lg transition ${formData.papel === 'PROFESSOR' ? 'bg-white shadow text-blue-900' : 'text-gray-500'}`}
+          className={`flex-1 py-3 text-[10px] font-black rounded-xl transition-all uppercase italic ${formData.papel === 'PROFESSOR' ? 'bg-blue-900 shadow-lg text-white' : 'text-gray-400'}`}
         >
-          NOVO PROFESSOR
+          Novo Professor
         </button>
       </div>
 
-      {/* DADOS BÁSICOS */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="md:col-span-2">
-          <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Nome Completo</label>
-          <input type="text" name="nomeCompleto" required onChange={handleChange} className="w-full p-3 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-600" placeholder="Nome do Judoca ou Professor" />
-        </div>
-        
+      <div className="space-y-3">
+        {/* NOME COMPLETO */}
         <div>
-          <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Nascimento</label>
-          <input type="date" name="dataNascimento" required onChange={handleChange} className="w-full p-3 border border-gray-200 rounded-xl text-sm" />
+          <label className="block text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Nome Completo</label>
+          <input type="text" name="nomeCompleto" required onChange={handleChange} className="w-full p-4 border border-gray-200 rounded-2xl font-bold bg-gray-50" placeholder="Nome do Judoca" />
         </div>
 
-        <div>
-          <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Sexo</label>
-          <select name="sexo" onChange={handleChange} className="w-full p-3 border border-gray-200 rounded-xl text-sm">
-            <option value="M">Masculino</option>
-            <option value="F">Feminino</option>
-          </select>
-        </div>
-      </div>
-
-      <hr className="border-gray-100" />
-
-      {/* DADOS LOGÍSTICOS */}
-      <div className="space-y-4">
-        {formData.papel === 'ALUNO' && (
+        {/* NASCIMENTO E SEXO */}
+        <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Responsável (Pai/Mãe)</label>
-            <input type="text" name="nomeResponsavel" required onChange={handleChange} className="w-full p-3 border border-gray-200 rounded-xl" placeholder="Nome do responsável" />
+            <label className="block text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Nascimento</label>
+            <input type="date" name="dataNascimento" required onChange={handleChange} className="w-full p-4 border border-gray-200 rounded-2xl text-xs font-bold bg-gray-50" />
+          </div>
+          <div>
+            <label className="block text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Sexo</label>
+            <select name="sexo" onChange={handleChange} className="w-full p-4 border border-gray-200 rounded-2xl text-xs font-bold bg-gray-50">
+              <option value="M">Masculino</option>
+              <option value="F">Feminino</option>
+            </select>
+          </div>
+        </div>
+
+        {/* WHATSAPP */}
+        <div>
+          <label className="block text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">WhatsApp</label>
+          <input type="text" name="telefone" required onChange={handleChange} className="w-full p-4 border border-gray-200 rounded-2xl font-bold bg-gray-50" placeholder="(81) 9...." />
+        </div>
+
+        {/* CAMPOS ESPECÍFICOS DE ALUNO */}
+        {formData.papel === 'ALUNO' && (
+          <div className="space-y-3 animate-in fade-in duration-300">
+            <div>
+              <label className="block text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Responsável (Pai/Mãe)</label>
+              <input type="text" name="nomeResponsavel" required onChange={handleChange} className="w-full p-4 border border-gray-200 rounded-2xl font-bold bg-gray-50" placeholder="Nome do pai ou mãe" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Graduação</label>
+                <select name="graduacao" onChange={handleChange} className="w-full p-4 border border-gray-200 rounded-2xl text-xs font-bold bg-gray-50">
+                  <option value="Branca">Branca</option>
+                  <option value="Cinza">Cinza</option>
+                  <option value="Azul">Azul</option>
+                  <option value="Amarela">Amarela</option>
+                  <option value="Laranja">Laranja</option>
+                  <option value="Verde">Verde</option>
+                  <option value="Roxa">Roxa</option>
+                  <option value="Marrom">Marrom</option>
+                  <option value="Preta">Preta</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Vencimento</label>
+                <input type="number" name="diaVencimento" defaultValue={10} min={1} max={31} onChange={handleChange} className="w-full p-4 border border-gray-200 rounded-2xl font-black bg-blue-50 text-blue-900" />
+              </div>
+            </div>
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">WhatsApp / Telefone</label>
-            <input type="text" name="telefone" required onChange={handleChange} className="w-full p-3 border border-gray-200 rounded-xl" placeholder="(81) 9...." />
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Turno de Aula</label>
-            <select name="turno" value={formData.turno} onChange={handleChange} className="w-full p-3 border border-gray-200 rounded-xl text-sm">
-              <option value="MANHA">Manhã</option>
-              <option value="TARDE">Tarde</option>
-              <option value="NOITE">Noite</option>
-            </select>
-          </div>
-        </div>
-
-        <div className={`grid gap-4 ${formData.papel === 'ALUNO' ? 'grid-cols-2' : 'grid-cols-1'}`}>
-          <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Graduação</label>
-            <select name="graduacao" onChange={handleChange} className="w-full p-3 border border-gray-200 rounded-xl text-sm">
-              <option value="Branca">Branca</option>
-              <option value="Cinza">Cinza</option>
-              <option value="Azul">Azul</option>
-              <option value="Amarela">Amarela</option>
-              <option value="Laranja">Laranja</option>
-              <option value="Verde">Verde</option>
-              <option value="Roxa">Roxa</option>
-              <option value="Marrom">Marrom</option>
-              <option value="Preta">Preta</option>
-            </select>
-          </div>
-
-          {/* LÓGICA CONDICIONAL: Só aparece para Aluno */}
-          {formData.papel === 'ALUNO' && (
+        {/* CAMPOS ESPECÍFICOS DE PROFESSOR */}
+        {formData.papel === 'PROFESSOR' && (
+          <div className="p-4 bg-blue-900 rounded-2xl space-y-3 shadow-inner animate-in slide-in-from-bottom-2 duration-300">
+            <p className="text-[9px] font-black text-blue-200 uppercase italic">Acesso ao Painel do Sensei</p>
+            <input type="email" name="email" required onChange={handleChange} className="w-full p-3 border-none rounded-xl text-sm font-bold bg-white/10 text-white placeholder:text-blue-300" placeholder="e-mail@ctf.com" />
             <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Dia Vencimento</label>
-              <input 
-                type="number" 
-                name="diaVencimento" 
-                defaultValue={10} 
-                min={1} 
-                max={28} 
-                onChange={handleChange} 
-                className="w-full p-3 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-600" 
-              />
+              <label className="block text-[8px] font-bold text-blue-300 mb-1 uppercase tracking-tighter">Senha Provisória</label>
+              <input type="text" name="senha" defaultValue="123" onChange={handleChange} className="w-full p-3 border-none rounded-xl text-sm font-bold bg-white/10 text-white" />
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
-      {/* ACESSO APENAS PARA PROFESSOR */}
-      {formData.papel === 'PROFESSOR' && (
-        <div className="bg-blue-50 p-4 rounded-2xl space-y-3">
-          <p className="text-[10px] font-bold text-blue-800 uppercase">Credenciais de Acesso ao Painel</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-blue-900 mb-1">E-mail para Login</label>
-              <input type="email" name="email" required onChange={handleChange} className="w-full p-2 border border-blue-200 rounded-lg text-sm" placeholder="professor@ctferroviario.com" />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-blue-900 mb-1">Senha</label>
-              <input type="text" name="senha" defaultValue="123" onChange={handleChange} className="w-full p-2 border border-blue-200 rounded-lg text-sm bg-white" />
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="flex gap-4 pt-4">
-        <button type="button" onClick={onClose} className="flex-1 px-4 py-3 text-gray-400 font-bold hover:text-gray-600 transition">
+      {/* BOTÕES DE AÇÃO */}
+      <div className="flex gap-3 pt-4">
+        <button type="button" onClick={onClose} className="flex-1 py-4 text-gray-400 font-black uppercase text-[10px] tracking-widest">
           Cancelar
         </button>
-        <button type="submit" className="flex-1 px-4 py-3 bg-blue-900 text-white rounded-2xl font-black shadow-lg hover:bg-blue-800 transition uppercase tracking-wide">
-          Salvar {formData.papel === 'ALUNO' ? 'Aluno' : 'Professor'}
+        <button type="submit" className="flex- py-4 bg-blue-900 text-white rounded-2xl font-black shadow-xl uppercase italic tracking-widest text-[10px] hover:scale-95 transition-all">
+          Salvar {formData.papel === 'ALUNO' ? 'Judoca' : 'Professor'}
         </button>
       </div>
     </form>

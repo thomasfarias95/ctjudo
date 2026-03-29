@@ -1,30 +1,45 @@
-// service/api.ts
+import axios from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://ct-ferroviario.onrender.com';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
-// 1. Busca financeiro
-export const getFinanceiro = async (atletaId: string) => {
-  const response = await fetch(`${API_URL}/api/financeiro/${atletaId}`);
-  if (!response.ok) throw new Error('Erro ao buscar financeiro');
-  return response.json();
+// Criamos uma instância do Axios
+const api = axios.create({
+  baseURL: API_URL,
+});
+
+// INTERCEPTOR: Antes de qualquer requisição, ele coloca o Token no Header
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// 1. Login (Para salvar o token pela primeira vez)
+export const loginSensei = async (credentials: any) => {
+  const response = await api.post('/api/auth/login', credentials);
+  if (response.data.token) {
+    localStorage.setItem('token', response.data.token);
+    localStorage.setItem('user', JSON.stringify(response.data));
+  }
+  return response.data;
 };
 
-// 2. Download do PDF Técnico (Sincronizado com o novo Controller)
+// 2. Busca financeiro
+export const getFinanceiro = async (atletaId: string) => {
+  const response = await api.get(`/api/financeiro/${atletaId}`);
+  return response.data;
+};
+
+// 3. Download do PDF Técnico (Usando Blob no Axios)
 export const downloadRelatorioTecnico = async (id: number, nomeAtleta: string) => {
   try {
-    const response = await fetch(`${API_URL}/api/cadastro/atletas/${id}/relatorio-pdf`, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/pdf',
-      },
+    const response = await api.get(`/api/cadastro/atletas/${id}/relatorio-pdf`, {
+      responseType: 'blob', // Essencial para arquivos
     });
 
-    if (!response.ok) throw new Error('Erro ao gerar PDF Técnico no servidor');
-
-    const blob = await response.blob();
-    if (blob.size === 0) throw new Error('Arquivo PDF vazio');
-
-    const url = window.URL.createObjectURL(blob);
+    const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement('a');
     link.href = url;
     
@@ -33,48 +48,33 @@ export const downloadRelatorioTecnico = async (id: number, nomeAtleta: string) =
     
     document.body.appendChild(link);
     link.click();
-    
-    setTimeout(() => {
-      link.remove();
-      window.URL.revokeObjectURL(url);
-    }, 250);
-
+    link.remove();
+    window.URL.revokeObjectURL(url);
   } catch (error) {
     console.error("Erro no download:", error);
-    alert("Erro ao baixar relatório. Verifique se o servidor está ativo.");
+    alert("Sua sessão pode ter expirado. Tente logar novamente.");
   }
 };
 
-// 3. Alternar Status Ativo/Inativo (Ajustado para o Patch principal do Controller)
-export const updateAtletaStatus = async (id: number, novoStatus: boolean) => {
+// 4. Alternar Status e Promover (Usando o PATCH unificado)
+export const updateAtleta = async (id: number, dados: object) => {
   try {
-    const response = await fetch(`${API_URL}/api/cadastro/atletas/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ativo: novoStatus }), // Enviando como objeto para o Java mapear
-    });
-    
-    if (!response.ok) throw new Error('Erro ao atualizar status');
-    return true; 
+    const response = await api.patch(`/api/cadastro/atletas/${id}`, dados);
+    return response.data;
   } catch (error) {
-    console.error("Erro no PATCH status:", error);
+    console.error("Erro ao atualizar atleta:", error);
     throw error;
   }
 };
 
-// 4. Promover Atleta / Trocar Faixa (Ajustado para o Patch principal)
-export const promoverAtleta = async (id: number, novaGraduacao: string) => {
+export const updateAtletaStatus = async (id: number, ativo: boolean) => {
   try {
-    const response = await fetch(`${API_URL}/api/cadastro/atletas/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ graduacao: novaGraduacao }),
-    });
-
-    if (!response.ok) throw new Error('Erro ao promover atleta');
-    return true;
+    const response = await api.patch(`/api/cadastro/atletas/${id}/status`, { ativo });
+    return response.data;
   } catch (error) {
-    console.error("Erro no PATCH graduação:", error);
+    console.error("Erro ao mudar status:", error);
     throw error;
   }
 };
+
+export default api;

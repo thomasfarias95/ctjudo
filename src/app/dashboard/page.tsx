@@ -1,12 +1,15 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { updateAtletaStatus } from '@/service/api';
+import { useRouter } from 'next/navigation';
+import api, { updateAtletaStatus, updateAtleta } from '../../service/api';
 import { gerarDocumentoAtleta } from './geradorPDF';
 import { gerarReciboIndividual } from './gerarReciboIndividual';
 import CadastroUsuarioForm from './CadastroUsuarioForm';
 
 export default function DashboardAtletas() {
+  const router = useRouter();
+  
   // --- ESTADOS DE DADOS ---
   const [atletas, setAtletas] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -18,9 +21,6 @@ export default function DashboardAtletas() {
   const [busca, setBusca] = useState('');
   const [filtroAtividade, setFiltroAtividade] = useState<'TODOS' | 'ATIVOS' | 'INATIVOS'>('TODOS');
   const [filtroFinanceiro, setFiltroFinanceiro] = useState<'TODOS' | 'EM_DIA' | 'PENDENTE'>('TODOS');
-  const [filtroGenero, setFiltroGenero] = useState<'TODOS' | 'MASC' | 'FEM'>('TODOS');
-
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://ct-ferroviario.onrender.com';
 
   const GRADUACOES = [
     "BRANCA","BRANCA/CINZA" ,"CINZA","CINZA/AZUL", "AZUL", "AZUL/AMARELA","AMARELA","AMARELA/LARANJA", "LARANJA", 
@@ -28,227 +28,149 @@ export default function DashboardAtletas() {
     "KODANSHA 7º DAN","KODANSHA 8º DAN", "KODANSHA 9º DAN", "KODANSHA 10º DAN"
   ];
 
-  // --- FUNÇÃO PARA MOSTRAR TOAST ---
   const avisar = (msg: string, tipo: 'sucesso' | 'erro' = 'sucesso') => {
     setNotificacao({ msg, tipo });
     setTimeout(() => setNotificacao(null), 3000);
   };
 
-  // --- BUSCA DE DADOS ---
   const fetchAtletas = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/cadastro/atletas?t=${new Date().getTime()}`);
-      if (!response.ok) throw new Error();
-      const data = await response.json();
-      setAtletas(Array.isArray(data) ? data : []);
-    } catch (error) {
-      avisar("Erro ao carregar dados do servidor", "erro");
-      setAtletas([]);
+      const response = await api.get('/api/cadastro/atletas');
+      setAtletas(Array.isArray(response.data) ? response.data : []);
+    } catch (error: any) {
+      if (error.response?.status === 401 || error.response?.status === 403) handleLogout();
+      avisar("Erro ao carregar dados", "erro");
     } finally { setLoading(false); }
   };
 
   useEffect(() => {
-    const loggedIn = localStorage.getItem('isLoggedIn');
-    if (!loggedIn) { window.location.href = '/'; return; }
+    const token = localStorage.getItem('token');
+    if (!token) { router.push('/login'); return; }
     fetchAtletas();
   }, []);
 
-  // --- ATUALIZAÇÃO MANUAL DE GRADUAÇÃO ---
-  const handleUpdateGraduacao = async (id: number, novaGraduacao: string) => {
-    try {
-      // Update local para velocidade de UI
-      setAtletas(prev => prev.map(a => a.id === id ? { ...a, graduacao: novaGraduacao } : a));
-
-      const resp = await fetch(`${API_URL}/api/cadastro/atletas/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ graduacao: novaGraduacao })
-      });
-
-      if (resp.ok) {
-        avisar("Graduação atualizada com sucesso!");
-      } else {
-        throw new Error();
-      }
-    } catch (e) {
-      avisar("Erro ao salvar graduação", "erro");
-      fetchAtletas(); // Reverte se falhar
-    }
+  const handleLogout = () => {
+    localStorage.clear();
+    router.push('/login');
   };
 
-  // --- LÓGICA DE FILTRAGEM ---
+  const handleUpdateGraduacao = async (id: number, novaGraduacao: string) => {
+    try {
+      setAtletas(prev => prev.map(a => a.id === id ? { ...a, graduacao: novaGraduacao } : a));
+      await updateAtleta(id, { graduacao: novaGraduacao });
+      avisar("Graduação atualizada!");
+    } catch (e) { avisar("Erro ao salvar", "erro"); fetchAtletas(); }
+  };
+
+  const handleBaixaPagamento = async (id: number) => {
+    const atletaAlvo = atletas.find(a => a.id === id);
+    if (!atletaAlvo) return;
+    try {
+      setAtletas(prev => prev.map(a => a.id === id ? { ...a, statusPagamento: 'EM_DIA' } : a));
+      await updateAtleta(id, { statusPagamento: 'EM_DIA' });
+      gerarReciboIndividual({ ...atletaAlvo, statusPagamento: 'EM_DIA' });
+      avisar(`Confirmado: ${atletaAlvo.nomeCompleto}`);
+    } catch (e) { avisar("Falha no pagamento", "erro"); fetchAtletas(); }
+  };
+
+  const handleToggleStatus = async (id: number, ativo: boolean) => {
+    try {
+      await updateAtletaStatus(id, !ativo);
+      setAtletas(prev => prev.map(a => a.id === id ? { ...a, ativo: !ativo } : a));
+      avisar(`Status alterado!`);
+    } catch (e) { avisar("Erro no status", "erro"); }
+  };
+
   const atletasFiltrados = atletas.filter(atleta => {
     const nome = (atleta.nomeCompleto || atleta.nome || "").toLowerCase();
     const bateNome = nome.includes(busca.toLowerCase());
     const bateAtividade = filtroAtividade === 'TODOS' ? true : filtroAtividade === 'ATIVOS' ? atleta.ativo !== false : atleta.ativo === false;
     const bateFinanceiro = filtroFinanceiro === 'TODOS' ? true : filtroFinanceiro === 'EM_DIA' ? atleta.statusPagamento === 'EM_DIA' : atleta.statusPagamento !== 'EM_DIA';
-    const gen = (atleta.genero || atleta.sexo || "").toUpperCase();
-    const bateGenero = filtroGenero === 'TODOS' ? true : filtroGenero === 'MASC' ? (gen === 'MASCULINO' || gen === 'M') : (gen === 'FEMININO' || gen === 'F');
-    return bateNome && bateAtividade && bateFinanceiro && bateGenero;
+    return bateNome && bateAtividade && bateFinanceiro;
   });
 
-  // --- EXPORTAR PARA CSV ---
-  const handleExportar = () => {
-    const cabecalho = "Nome;Graduacao;Turno;Vencimento;Status\n";
-    const corpo = atletasFiltrados.map(a => `${a.nomeCompleto};${a.graduacao};${a.turno};${a.diaVencimento};${a.statusPagamento}`).join("\n");
-    const blob = new Blob(["\ufeff" + cabecalho + corpo], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `Relatorio_CTF_${new Date().toLocaleDateString()}.csv`;
-    link.click();
-    avisar("Relatório Excel (CSV) gerado!");
-  };
-
-  // --- AÇÕES ---
-  const handleBaixaPagamento = async (id: number) => {
-    const atletaAlvo = atletas.find(a => a.id === id);
-    if (!atletaAlvo) return;
-    
-    setAtletas(prev => prev.map(a => a.id === id ? { ...a, statusPagamento: 'EM_DIA' } : a));
-    
-    try {
-      const resp = await fetch(`${API_URL}/api/cadastro/atletas/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ statusPagamento: 'EM_DIA' })
-      });
-      if (resp.ok) { 
-        gerarReciboIndividual({ ...atletaAlvo, statusPagamento: 'EM_DIA' });
-        avisar(`Pagamento de ${atletaAlvo.nomeCompleto} confirmado!`);
-      }
-    } catch (e) { 
-      avisar("Falha ao processar pagamento", "erro"); 
-      fetchAtletas(); 
-    }
-  };
-
-  const handleToggleStatus = async (id: number, ativo: any) => {
-    try {
-      await updateAtletaStatus(id, !ativo);
-      setAtletas(prev => prev.map(a => a.id === id ? { ...a, ativo: !ativo } : a));
-      avisar(`Status do atleta atualizado!`);
-    } catch (e) { avisar("Erro ao mudar status", "erro"); }
-  };
-
-  if (loading) return <div className="min-h-screen flex items-center justify-center font-black text-blue-900 animate-pulse italic uppercase text-sm">Carregando CT Ferroviário...</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center font-black text-blue-900 animate-pulse italic uppercase">Carregando CTF...</div>;
 
   return (
-    <div className={`p-4 md:p-8 min-h-screen transition-all duration-500 font-sans ${darkMode ? 'bg-slate-950 text-white' : 'bg-gray-50 text-black'}`}>
+    <div className={`p-4 md:p-8 min-h-screen transition-all ${darkMode ? 'bg-slate-950 text-white' : 'bg-gray-50 text-black'}`}>
       
-      {/* NOTIFICAÇÃO (TOAST) */}
+      {/* TOAST RESPONSIVO */}
       {notificacao && (
-        <div className={`fixed top-5 right-5 z-50 px-6 py-4 rounded-2xl shadow-2xl font-black uppercase italic text-[10px] tracking-widest animate-bounce border-b-4 ${notificacao.tipo === 'sucesso' ? 'bg-emerald-500 text-white border-emerald-700' : 'bg-red-600 text-white border-red-800'}`}>
-          {notificacao.tipo === 'sucesso' ? '✓ ' : '⚠ '} {notificacao.msg}
+        <div className={`fixed top-4 left-4 right-4 md:left-auto md:right-5 z-50 px-6 py-4 rounded-2xl shadow-2xl font-black uppercase italic text-[10px] animate-bounce border-b-4 ${notificacao.tipo === 'sucesso' ? 'bg-emerald-500 text-white border-emerald-700' : 'bg-red-600 text-white border-red-800'}`}>
+          {notificacao.msg}
         </div>
       )}
 
-      {/* HEADER */}
-      <div className={`mb-8 flex flex-col md:flex-row justify-between items-start md:items-end border-b pb-6 gap-4 ${darkMode ? 'border-slate-800' : 'border-gray-200'}`}>
+      {/* HEADER MOBILE-FRIENDLY */}
+      <div className={`mb-8 flex flex-col md:flex-row justify-between items-start gap-6 border-b pb-6 ${darkMode ? 'border-slate-800' : 'border-gray-200'}`}>
         <div>
-          <h1 className={`text-4xl font-black uppercase italic tracking-tighter leading-none ${darkMode ? 'text-white' : 'text-blue-900'}`}>CT FERROVIÁRIO</h1>
-          <div className="flex gap-4 mt-2">
-            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.3em]">Painel de Controle</p>
-            <button onClick={() => setDarkMode(!darkMode)} className={`text-[9px] font-black uppercase px-2 py-0.5 rounded border ${darkMode ? 'border-slate-700 text-yellow-400' : 'border-gray-300 text-blue-900'}`}>
-              {darkMode ? '☀️ Modo Claro' : '🌙 Modo Escuro'}
-            </button>
-          </div>
+          <h1 className="text-3xl md:text-4xl font-black uppercase italic tracking-tighter text-blue-900 dark:text-white">CT FERROVIÁRIO</h1>
+          <button onClick={() => setDarkMode(!darkMode)} className="mt-2 text-[9px] font-black uppercase px-3 py-1 rounded-full border border-gray-300 dark:border-slate-700">
+            {darkMode ? '☀️ Modo Claro' : '🌙 Modo Escuro'}
+          </button>
         </div>
+        <button onClick={handleLogout} className="w-full md:w-auto bg-red-600 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase">Sair do Painel</button>
+      </div>
+
+      {/* BUSCA E FILTROS ACESSÍVEIS */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+        <input 
+          type="text" 
+          placeholder="🔍 Nome do atleta..." 
+          className={`p-4 rounded-2xl font-bold uppercase italic border ${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-gray-200'}`}
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+        />
         <div className="flex gap-2">
-            <button onClick={handleExportar} className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-emerald-700 transition-all">Exportar Planilha</button>
-            <button onClick={() => { localStorage.clear(); window.location.href='/'; }} className="bg-red-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase">Sair</button>
+          <select 
+            value={filtroAtividade} 
+            onChange={(e) => setFiltroAtividade(e.target.value as any)}
+            className={`flex-1 p-4 rounded-2xl text-[10px] font-black uppercase border ${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-gray-200'}`}
+          >
+            <option value="TODOS">TODOS OS STATUS</option>
+            <option value="ATIVOS">SÓ ATIVOS</option>
+            <option value="INATIVOS">SÓ INATIVOS</option>
+          </select>
         </div>
       </div>
 
-      {/* FILTROS */}
-      <div className={`p-6 rounded-[2rem] shadow-sm border mb-8 space-y-4 ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-100'}`}>
-        <div className="flex flex-col xl:flex-row gap-4">
-          <input 
-            type="text" 
-            placeholder="🔍 Buscar atleta pelo nome..." 
-            className={`flex-1 p-3 rounded-xl outline-none text-sm font-bold uppercase italic border transition-all ${darkMode ? 'bg-slate-800 border-slate-700 text-white focus:ring-blue-500' : 'bg-gray-50 border-gray-200 focus:ring-blue-900'}`}
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-          />
-
-          <div className="flex flex-wrap gap-3">
-            <div className={`flex p-1 rounded-xl border ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-50 border-gray-100'}`}>
-              {['TODOS', 'ATIVOS', 'INATIVOS'].map((f) => (
-                <button key={f} onClick={() => setFiltroAtividade(f as any)} className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all ${filtroAtividade === f ? 'bg-blue-600 text-white shadow-md' : 'text-gray-400'}`}>{f}</button>
-              ))}
-            </div>
-            <div className={`flex p-1 rounded-xl border ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-50 border-gray-100'}`}>
-              {['TODOS', 'EM_DIA', 'PENDENTE'].map((f) => (
-                <button key={f} onClick={() => setFiltroFinanceiro(f as any)} className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all ${filtroFinanceiro === f ? 'bg-emerald-600 text-white shadow-md' : 'text-gray-400'}`}>{f}</button>
-              ))}
-            </div>
-            <div className={`flex p-1 rounded-xl border ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-50 border-gray-100'}`}>
-              {['TODOS', 'MASC', 'FEM'].map((f) => (
-                <button key={f} onClick={() => setFiltroGenero(f as any)} className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all ${filtroGenero === f ? 'bg-pink-600 text-white shadow-md' : 'text-gray-400'}`}>{f}</button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* TABELA COM EDIÇÃO DE GRADUAÇÃO */}
-      <div className={`rounded-[2rem] shadow-2xl border overflow-hidden ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-100'}`}>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[900px]">
+      {/* TABELA COM SCROLL HORIZONTAL (CRUCIAL PARA MOBILE) */}
+      <div className={`rounded-[2rem] shadow-xl border overflow-hidden ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-100'}`}>
+        <div className="overflow-x-auto overflow-y-hidden">
+          <table className="w-full text-left min-w-[800px]">
             <thead>
-              <tr className={darkMode ? 'bg-slate-800 text-white' : 'bg-blue-900 text-white'}>
-                <th className="p-6 font-bold uppercase text-[10px] tracking-widest italic">Atleta / Graduação</th>
-                <th className="p-6 font-bold uppercase text-[10px] tracking-widest text-center italic">Vencimento</th>
-                <th className="p-6 font-bold uppercase text-[10px] tracking-widest text-center italic">Financeiro</th>
-                <th className="p-6 font-bold uppercase text-[10px] tracking-widest text-right italic">Gestão</th>
+              <tr className="bg-blue-900 text-white">
+                <th className="p-6 text-[10px] uppercase italic">Atleta</th>
+                <th className="p-6 text-[10px] uppercase italic text-center">Pagamento</th>
+                <th className="p-6 text-[10px] uppercase italic text-right">Ações</th>
               </tr>
             </thead>
-            <tbody className={`divide-y ${darkMode ? 'divide-slate-800' : 'divide-gray-50'}`}>
+            <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
               {atletasFiltrados.map((atleta) => (
-                <tr key={atleta.id} className={`transition-colors ${darkMode ? 'hover:bg-slate-800/50' : 'hover:bg-blue-50/40'}`}>
+                <tr key={atleta.id} className="hover:bg-blue-50/40 dark:hover:bg-slate-800/50">
                   <td className="p-6">
-                    <div className="font-black text-base uppercase leading-tight">{atleta.nomeCompleto || atleta.nome}</div>
-                    
-                    {/* SELECT DE GRADUAÇÃO EDITÁVEL */}
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-[10px]">🥋</span>
-                      <select 
-                        value={atleta.graduacao?.toUpperCase()} 
-                        onChange={(e) => handleUpdateGraduacao(atleta.id, e.target.value)}
-                        className={`bg-transparent text-[10px] font-black uppercase outline-none border-b border-transparent hover:border-blue-500 transition-all cursor-pointer ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}
-                      >
-                        {GRADUACOES.map(g => (
-                          <option key={g} value={g} className={darkMode ? 'bg-slate-900 text-white' : 'bg-white text-black'}>
-                            {g}
-                          </option>
-                        ))}
-                      </select>
-                      <span className="text-[10px] font-bold text-gray-500 uppercase">• {atleta.turno}</span>
-                    </div>
+                    <div className="font-black uppercase text-sm">{atleta.nomeCompleto}</div>
+                    <select 
+                      value={atleta.graduacao} 
+                      onChange={(e) => handleUpdateGraduacao(atleta.id, e.target.value)}
+                      className="text-[9px] font-bold uppercase bg-transparent text-blue-600 outline-none"
+                    >
+                      {GRADUACOES.map(g => <option key={g} value={g}>{g}</option>)}
+                    </select>
                   </td>
-                  <td className="p-6 text-center font-bold text-gray-500 text-xs">DIA {atleta.diaVencimento || 10}</td>
                   <td className="p-6 text-center">
-                    <span className={`px-3 py-1 rounded-full text-[9px] font-black border-2 ${atleta.statusPagamento === 'EM_DIA' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20 animate-pulse'}`}>
+                    <span className={`px-3 py-1 rounded-full text-[9px] font-black ${atleta.statusPagamento === 'EM_DIA' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
                       {atleta.statusPagamento || 'PENDENTE'}
                     </span>
                   </td>
                   <td className="p-6">
-                    <div className="flex justify-end gap-2">
-                        <button onClick={() => handleBaixaPagamento(atleta.id)} className="w-9 h-9 bg-emerald-500 text-white rounded-lg font-black hover:scale-110 transition-transform">✓</button>
-                        <button onClick={() => gerarDocumentoAtleta(atleta)} className="w-9 h-9 bg-blue-600 text-white rounded-lg font-black hover:scale-110 transition-transform">$</button>
-                        
-                        <a 
-                          href={`${API_URL}/api/cadastro/atletas/${atleta.id}/relatorio-pdf`} 
-                          target="_blank" 
-                          rel="noopener noreferrer" 
-                          className="w-9 h-9 bg-slate-700 text-white rounded-lg flex items-center justify-center font-black hover:scale-110 transition-transform"
-                        >
-                          🥋
-                        </a>
-
-                        <button onClick={() => handleToggleStatus(atleta.id, atleta.ativo)} className={`px-3 h-9 rounded-lg text-[9px] font-black text-white ${atleta.ativo !== false ? 'bg-red-500' : 'bg-green-600'}`}>
-                          {atleta.ativo !== false ? "SUSPENDER" : "ATIVAR"}
-                        </button>
+                    <div className="flex justify-end gap-3">
+                      {/* BOTÕES MAIORES PARA FACILITAR O TOQUE NO CELULAR */}
+                      <button onClick={() => handleBaixaPagamento(atleta.id)} className="w-12 h-12 bg-emerald-500 text-white rounded-xl flex items-center justify-center font-bold">✓</button>
+                      <button onClick={() => gerarDocumentoAtleta(atleta)} className="w-12 h-12 bg-blue-600 text-white rounded-xl flex items-center justify-center font-bold">$</button>
+                      <button onClick={() => handleToggleStatus(atleta.id, atleta.ativo)} className={`px-4 h-12 rounded-xl text-[9px] font-black text-white ${atleta.ativo !== false ? 'bg-red-500' : 'bg-green-600'}`}>
+                        {atleta.ativo !== false ? "OFF" : "ON"}
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -258,20 +180,26 @@ export default function DashboardAtletas() {
         </div>
       </div>
 
-      {/* MATRÍCULA */}
-      <button onClick={() => setIsModalOpen(true)} className="fixed bottom-8 right-8 bg-blue-700 text-white px-8 py-4 rounded-full font-black uppercase italic shadow-2xl hover:scale-105 transition-all z-40 border-4 border-white">
-        + Matricular Atleta
+      {/* BOTÃO FLUTUANTE AJUSTADO PARA MOBILE */}
+      <button 
+        onClick={() => setIsModalOpen(true)} 
+        className="fixed bottom-6 right-6 md:bottom-8 md:right-8 bg-blue-700 text-white px-6 py-4 rounded-2xl font-black uppercase italic shadow-2xl z-40 border-2 border-white text-xs"
+      >
+        + Matricular
       </button>
 
-      {/* MODAL */}
+      {/* MODAL RESPONSIVO */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-50 p-4">
-          <div className={`rounded-[2rem] shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col border ${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-gray-100'}`}>
-            <div className="bg-blue-900 p-6 text-white flex justify-between items-center font-black italic uppercase text-xs">
-              Nova Inscrição <button onClick={() => setIsModalOpen(false)} className="text-xl">✕</button>
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-end md:items-center justify-center z-50 p-0 md:p-4">
+          <div className={`w-full max-w-2xl h-[90vh] md:h-auto md:max-h-[90vh] rounded-t-[2rem] md:rounded-[2rem] overflow-hidden flex flex-col ${darkMode ? 'bg-slate-900' : 'bg-white'}`}>
+            <div className="p-6 border-b flex justify-between items-center font-black uppercase italic text-xs bg-blue-900 text-white">
+              Nova Matrícula <button onClick={() => setIsModalOpen(false)} className="text-xl p-2">✕</button>
             </div>
-            <div className="p-6 overflow-y-auto custom-scrollbar">
-              <CadastroUsuarioForm onClose={() => setIsModalOpen(false)} onSuccess={() => { setIsModalOpen(false); fetchAtletas(); avisar("Atleta matriculado com sucesso!"); }} />
+            <div className="p-6 overflow-y-auto pb-24 md:pb-6">
+              <CadastroUsuarioForm 
+                onClose={() => setIsModalOpen(false)} 
+                onSuccess={() => { setIsModalOpen(false); fetchAtletas(); avisar("Matriculado!"); }} 
+              />
             </div>
           </div>
         </div>
