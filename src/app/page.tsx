@@ -1,36 +1,30 @@
-import type { Metadata } from 'next';
-import Navbar from './components/Navbar';
-import Hero from './components/Hero';
-import About from './components/About';
-import Classes from './components/Classes';
-import Contact from './components/Contact';
-import Footer from './components/Footer';
-import Teacher from './components/Teacher';
-import WhatsAppButton from './components/WhatsAppButton';
+'use client';
 
+import { useState, useEffect } from 'react';
+import LandingContent from './components/LandingContent';
+import LoadingScreen from './components/LoadingScreen';
 
-export const metadata: Metadata = {
-  title: 'Equipe CT Ferroviario de Judô - Disciplina, Respeito e Superação',
-  description: 'Junte-se à Equipe Bushido Judô! Aulas para todas as idades, desenvolvimento físico e mental. Venha treinar conosco!',
-  keywords: ['judô', 'aulas de judô', 'equipe de judô', 'artes marciais', 'Recife', 'Pernambuco', 'crianças', 'adultos', 'defesa pessoal'],
-};
+export default function HomePage() {
+  const [isLoading, setIsLoading] = useState(true);
 
+  useEffect(() => {
+    // Definimos 3 segundos para a animação aparecer
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 3000);
 
-const HomePage: React.FC = () => {
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <>
-      <Navbar />
-      <main>
-        <Hero />
-        <About />
-        <Teacher/>
-        <Classes />
-        <Contact />
-      </main>
-      <WhatsAppButton numero = "+5581998264250" />
-      <Footer />
+      {isLoading ? (
+        <LoadingScreen />
+      ) : (
+        <div className="animate-in fade-in duration-1000">
+          <LandingContent />
+        </div>
+      )}
     </>
   );
-};
-
-export default HomePage;
+}
