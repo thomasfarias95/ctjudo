@@ -1,23 +1,32 @@
 import axios from 'axios';
 
+// Certifique-se de que na Vercel a variável NEXT_PUBLIC_API_URL 
+// seja apenas: https://ct-ferroviario.onrender.com (SEM o /api no final)
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
-// Criamos uma instância do Axios
 const api = axios.create({
   baseURL: API_URL,
 });
 
-// INTERCEPTOR: Antes de qualquer requisição, ele coloca o Token no Header
+// INTERCEPTOR: Inteligente para não quebrar rotas públicas
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+
+  // Só adiciona o cabeçalho se o token REALMENTE existir e for válido
+  // Isso evita que o Spring Security dê 403 em rotas públicas como /api/professores
+  if (token && token !== 'null' && token !== 'undefined') {
     config.headers.Authorization = `Bearer ${token}`;
   }
+
   return config;
+}, (error) => {
+  return Promise.reject(error);
 });
 
-// 1. Login (Para salvar o token pela primeira vez)
+// --- MÉTODOS DE AUTENTICAÇÃO ---
+
 export const loginSensei = async (credentials: any) => {
+  // A rota completa será: baseURL + /api/auth/login
   const response = await api.post('/api/auth/login', credentials);
   if (response.data.token) {
     localStorage.setItem('token', response.data.token);
@@ -26,17 +35,25 @@ export const loginSensei = async (credentials: any) => {
   return response.data;
 };
 
-// 2. Busca financeiro
+// --- MÉTODOS DE DADOS ---
+
+// Busca a lista de professores (pública - essencial para carregar as fotos)
+export const getProfessores = async () => {
+  const response = await api.get('/api/professores');
+  return response.data;
+};
+
 export const getFinanceiro = async (atletaId: string) => {
   const response = await api.get(`/api/financeiro/${atletaId}`);
   return response.data;
 };
 
-// 3. Download do PDF Técnico (Usando Blob no Axios)
+// --- MÉTODOS DE ATUALIZAÇÃO E ARQUIVOS ---
+
 export const downloadRelatorioTecnico = async (id: number, nomeAtleta: string) => {
   try {
     const response = await api.get(`/api/cadastro/atletas/${id}/relatorio-pdf`, {
-      responseType: 'blob', // Essencial para arquivos
+      responseType: 'blob',
     });
 
     const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -52,29 +69,18 @@ export const downloadRelatorioTecnico = async (id: number, nomeAtleta: string) =
     window.URL.revokeObjectURL(url);
   } catch (error) {
     console.error("Erro no download:", error);
-    alert("Sua sessão pode ter expirado. Tente logar novamente.");
+    alert("Sessão expirada ou erro no servidor. Tente logar novamente.");
   }
 };
 
-// 4. Alternar Status e Promover (Usando o PATCH unificado)
 export const updateAtleta = async (id: number, dados: object) => {
-  try {
-    const response = await api.patch(`/api/cadastro/atletas/${id}`, dados);
-    return response.data;
-  } catch (error) {
-    console.error("Erro ao atualizar atleta:", error);
-    throw error;
-  }
+  const response = await api.patch(`/api/cadastro/atletas/${id}`, dados);
+  return response.data;
 };
 
 export const updateAtletaStatus = async (id: number, ativo: boolean) => {
-  try {
-    const response = await api.patch(`/api/cadastro/atletas/${id}/status`, { ativo });
-    return response.data;
-  } catch (error) {
-    console.error("Erro ao mudar status:", error);
-    throw error;
-  }
+  const response = await api.patch(`/api/cadastro/atletas/${id}/status`, { ativo });
+  return response.data;
 };
 
 export default api;
