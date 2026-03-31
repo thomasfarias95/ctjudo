@@ -1,33 +1,24 @@
 'use client';
 
-import React from 'react';
-
 export default function LoadingScreen() {
   return (
-    <div className="fixed inset-0 z- flex flex-col items-center justify-center bg-white">
-      {/* O GIF de Judô que você renomeou na pasta public */}
-      <img 
-        src="/animacao-judo.gif" 
-        alt="Carregando CT Ferroviário..." 
-        className="w-64 h-64 object-contain transition-all duration-700"
-      />
-      
-      <div className="text-center space-y-2">
-        <h2 className="mt-4 text-2xl font-bold text-blue-900 animate-pulse tracking-wide">
-          CT FERROVIÁRIO
-        </h2>
+    <div className="fixed inset-0 z- flex flex-col items-center justify-center bg-white w-screen h-screen">
+      {/* Container da Animação */}
+      <div className="flex flex-col items-center justify-center animate-in fade-in zoom-in duration-700">
+        <img 
+          src="/animacao-judo.gif" 
+          alt="Judô CT Ferroviário" 
+          className="w-80 h-80 md:w-[450px] md:h-[450px] object-contain" 
+        />
         
-        <div className="flex flex-col items-center">
-          <p className="text-gray-600 font-medium">Preparando o Tatame...</p>
-          <span className="text-gray-400 text-xs mt-2 uppercase tracking-widest italic">
-            Iniciando sistemas
-          </span>
+        <h1 className="mt-8 text-3xl md:text-5xl font-black text-blue-900 tracking-tighter uppercase italic">
+          CT FERROVIÁRIO
+        </h1>
+        
+        {/* Barra de progresso minimalista no rodapé */}
+        <div className="absolute bottom-10 w-64 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+          <div className="h-full bg-blue-900 animate-[loading_2s_ease-in-out_infinite] w-full origin-left"></div>
         </div>
-      </div>
-
-      {/* Uma barrinha de progresso fake para dar um charme extra */}
-      <div className="w-48 h-1 bg-gray-100 rounded-full mt-6 overflow-hidden">
-        <div className="h-full bg-blue-900 animate-[loading_2s_ease-in-out_infinite] w-full origin-left"></div>
       </div>
 
       <style jsx>{`

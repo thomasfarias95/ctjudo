@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -38,14 +38,23 @@ export default function DashboardAtletas() {
       const response = await api.get('/api/cadastro/atletas');
       setAtletas(Array.isArray(response.data) ? response.data : []);
     } catch (error: any) {
-      if (error.response?.status === 401 || error.response?.status === 403) handleLogout();
-      avisar("Erro ao carregar dados", "erro");
-    } finally { setLoading(false); }
+      console.error("Erro ao carregar atletas:", error);
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        handleLogout();
+      } else {
+        avisar("Servidor demorou a responder. Tente recarregar.", "erro");
+      }
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (!token) { router.push('/login'); return; }
+    if (!token) { 
+      router.push('/login'); 
+      return; 
+    }
     fetchAtletas();
   }, []);
 
@@ -59,7 +68,10 @@ export default function DashboardAtletas() {
       setAtletas(prev => prev.map(a => a.id === id ? { ...a, graduacao: novaGraduacao } : a));
       await updateAtleta(id, { graduacao: novaGraduacao });
       avisar("Graduação atualizada!");
-    } catch (e) { avisar("Erro ao salvar", "erro"); fetchAtletas(); }
+    } catch (e) { 
+      avisar("Erro ao salvar", "erro"); 
+      fetchAtletas(); 
+    }
   };
 
   const handleBaixaPagamento = async (id: number) => {
@@ -70,7 +82,10 @@ export default function DashboardAtletas() {
       await updateAtleta(id, { statusPagamento: 'EM_DIA' });
       gerarReciboIndividual({ ...atletaAlvo, statusPagamento: 'EM_DIA' });
       avisar(`Confirmado: ${atletaAlvo.nomeCompleto}`);
-    } catch (e) { avisar("Falha no pagamento", "erro"); fetchAtletas(); }
+    } catch (e) { 
+      avisar("Falha no pagamento", "erro"); 
+      fetchAtletas(); 
+    }
   };
 
   const handleToggleStatus = async (id: number, ativo: boolean) => {
@@ -78,7 +93,9 @@ export default function DashboardAtletas() {
       await updateAtletaStatus(id, !ativo);
       setAtletas(prev => prev.map(a => a.id === id ? { ...a, ativo: !ativo } : a));
       avisar(`Status alterado!`);
-    } catch (e) { avisar("Erro no status", "erro"); }
+    } catch (e) { 
+      avisar("Erro no status", "erro"); 
+    }
   };
 
   const atletasFiltrados = atletas.filter(atleta => {
@@ -89,7 +106,17 @@ export default function DashboardAtletas() {
     return bateNome && bateAtividade && bateFinanceiro;
   });
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center font-black text-blue-900 animate-pulse italic uppercase">Carregando CTF...</div>;
+  // --- ESTADO DE CARREGAMENTO MINIMALISTA ---
+  if (loading) {
+    return (
+      <div className={`min-h-screen flex flex-col items-center justify-center space-y-4 ${darkMode ? 'bg-slate-950 text-white' : 'bg-gray-50 text-blue-900'}`}>
+        <div className="w-12 h-12 border-4 border-blue-900 border-t-orange-500 rounded-full animate-spin"></div>
+        <p className="font-black uppercase italic tracking-tighter animate-pulse text-sm">
+          Sincronizando Atletas...
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className={`p-4 md:p-8 min-h-screen transition-all ${darkMode ? 'bg-slate-950 text-white' : 'bg-gray-50 text-black'}`}>
